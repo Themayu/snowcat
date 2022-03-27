@@ -25,3 +25,4 @@ features = ["chrono"]
 
 [dependencies.snowcat_macros]
 path = "../src-macros"
+version = "1.0.0"
