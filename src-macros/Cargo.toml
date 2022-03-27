@@ -15,7 +15,13 @@ quote = "1.0"
 [dependencies.syn]
 version = "1.0"
 default-features = false
-features = ["full"]
+features = [
+	"clone-impls",
+	"full",
+	"parsing",
+	"printing",
+	"proc-macro",
+]
 
 [lib]
 proc-macro = true
