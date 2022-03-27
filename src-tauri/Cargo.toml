@@ -1,0 +1,52 @@
+[package]
+name = "snowcat"
+description = "An F-Chat client written in Rust and Tauri."
+authors = ["Dragon Wolf"]
+license = "MIT"
+version = "0.1.0"
+edition = "2018"
+default-run = "snowcat"
+build = "src/build.rs"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[build-dependencies]
+tauri-build = { version = "1.0.0-rc.3", features = [] }
+
+[dependencies]
+env_logger = "0.9.0"
+hyper-rustls = "0.22.1"
+log = "0.4.14"
+log-derive = "0.4.1"
+once_cell = "1.7.2"
+serde_with = "1.0"
+serde_json = "1.0"
+toml = "0.5.8"
+
+[dependencies.futures-util]
+version = "0.3"
+default-features = false
+features = ["async-await", "sink", "std"]
+
+[dependencies.hyper]
+version = "0.14"
+features = ["client", "http1"]
+
+[dependencies.serde]
+version = "1.0"
+features = ["derive"]
+
+[dependencies.snowcat_common]
+path = "../src-common"
+
+[dependencies.tauri]
+version = "1.0.0-rc.3"
+features = ["window-close", "window-maximize", "window-minimize", "window-set-title", "window-start-dragging", "window-unmaximize"]
+
+[dependencies.tokio]
+version = "1.0"
+features = ["macros", "rt"]
+
+[features]
+default = [ "custom-protocol" ]
+custom-protocol = [ "tauri/custom-protocol" ]

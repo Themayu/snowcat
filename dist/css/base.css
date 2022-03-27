@@ -1,0 +1,152 @@
+html,
+body {
+	margin: 0;
+	padding: 0;
+	width: 100%;
+	height: 100%;
+	background-color: var(--background-secondary);
+	color: var(--ui-text);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+	font-weight: normal;
+	margin: 0;
+}
+
+.collapsible {
+	transition: width 400ms cubic-bezier(0.660, 0.000, 0.440, 1.000);
+}
+
+.collapsible.collapsed {
+	overflow: hidden;
+	width: 0;
+}
+
+.container {
+	box-sizing: border-box;
+}
+
+.container.frameless {
+	border: 1px solid var(--background-tertiary);
+}
+
+.body {
+	flex: 1 0 auto;
+}
+
+.titlebar {
+	align-items: center;
+	background-color: var(--background-tertiary);
+	display: flex;
+	flex: 0 0 auto;
+	flex-direction: row;
+	font-size: 14px;
+}
+
+.titlebar .app-icon {
+	margin: 6px;
+	pointer-events: none;
+	width: 21px;
+}
+
+.titlebar .title {
+	color: var(--header-primary);
+	/* font-weight: lighter; */
+	margin-block: 7px;
+	margin-inline-start: 7px;
+	margin-inline-end: auto;
+	pointer-events: none;
+}
+
+.titlebar .app-icon + .title {
+	margin-inline-start: 0;
+}
+
+.titlebar .button {
+	color: var(--ui-inactive);
+	cursor: pointer;
+	font-size: 12px;
+	height: 33px;
+	line-height: 35px;
+	text-align: center;
+	width: 33px;
+}
+
+.titlebar .button:hover {
+	background-color: var(--background-secondary-alt);
+	color: var(--ui-text);
+}
+
+.titlebar .button.close:hover {
+	background-color: var(--ui-danger);
+	color: var(--header-primary);
+}
+
+.titlebar .button-text {
+	display: inline-block;
+	line-height: normal;
+	vertical-align: middle;
+}
+
+.icon {
+	font-family: "Segoe Fluent Icons", "Segoe MDL2 Assets";
+}
+
+@media only screen and (max-width: 1249px) {
+	.alert-staff .text {
+		display: none;
+	}
+
+	.alert-staff .icon {
+		margin: 0;
+	}
+}
+
+@media only screen and (max-width: 1099px) {
+	.collapsible {
+		--shadow-color: #202225;
+		--shadow-size: 4px;
+		position: absolute;
+		bottom: 0;
+		top: 0;
+	}
+
+	.collapsible:nth-child(1) {
+		box-shadow: var(--shadow-size) 0 var(--shadow-size) var(--shadow-color);
+		left: 0;
+	}
+
+	.collapsible:nth-child(3) {
+		box-shadow: calc(var(--shadow-size) * -1) 0 var(--shadow-size) var(--shadow-color);
+		right: 0;
+	}
+
+	.collapsible:not(.expanded) {
+		overflow: hidden;
+		width: 0;
+	}
+
+	.alert-staff .text {
+		display: initial;
+	}
+
+	.alert-staff .icon {
+		margin: unset;
+		margin-left: 13px;
+	}
+}
+
+@media only screen and (max-width: 749px) {
+	.alert-staff .text {
+		display: none;
+	}
+
+	.alert-staff .icon {
+		margin: 0;
+	}
+}

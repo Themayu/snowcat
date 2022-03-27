@@ -1,0 +1,16 @@
+{
+	"rust-analyzer.diagnostics.disabled": [
+		"unresolved-macro-call"
+	],
+
+	"todo-tree.tree.showBadges": true,
+	"todo-tree.tree.disableCompactFolders": false,
+	"todo-tree.tree.showCountsInTree": true,
+	"todo-tree.highlights.customHighlight": {
+		"UNSTABLE": {
+			"icon": "clock",
+			"iconColour": "#ff4444",
+			"type": "whole-line"
+		}
+	}
+}
