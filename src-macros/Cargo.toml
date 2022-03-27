@@ -1,0 +1,19 @@
+[package]
+name = "snowcat_macros"
+description = "Procedural macros used in Snowcat."
+authors = ["Dragon Wolf"]
+license = "MIT"
+version = "1.0.0"
+edition = "2018"
+
+[dependencies]
+proc-macro2 = "1.0"
+quote = "1.0"
+
+[dependencies.syn]
+version = "1.0"
+default-features = false
+features = ["full"]
+
+[lib]
+proc-macro = true

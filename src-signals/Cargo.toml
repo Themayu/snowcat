@@ -1,0 +1,14 @@
+[package]
+name = "snowcat_signals"
+description = "Signal extensions for the Snowcat UI."
+authors = ["Dragon Wolf"]
+license = "MIT"
+version = "0.1.0"
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+futures-signals = "0.3"
+log = "0.4.14"
+pin-project = "1.0.8"
