@@ -6,6 +6,7 @@ license = "MIT OR Apache-2.0"
 version = "0.1.0"
 edition = "2018"
 repository = "https://github.com/Themayu/snowcat"
+readme = false
 default-run = "snowcat"
 build = "src/build.rs"
 
