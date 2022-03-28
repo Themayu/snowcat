@@ -137,7 +137,7 @@ impl ClientScreenState {
 #[derive(Debug, Clone)]
 pub enum ClientView {
 	Console,
-	Conversation(Rc<Conversation>, Rc<Character>),
+	Conversation(Rc<conversation::ViewState>),
 	PublicChannel(Rc<channel::ViewState>),
 }
 
@@ -148,7 +148,7 @@ pub fn render(
 ) -> Dom {
 	match client_view {
 		ClientView::Console => clone!(app, screen_state => console::render(app, screen_state)),
-		ClientView::Conversation(channel, other_character) => clone!(app, screen_state, other_character, channel => todo!("private conversation rendering")),
+		ClientView::Conversation(_view_state) => todo!("private conversation rendering"),
 		ClientView::PublicChannel(view_state) => channel::render(app.clone(), screen_state.clone(), view_state.clone()),
 	}
 }
