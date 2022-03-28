@@ -8,8 +8,8 @@ use crate::styles::{NO_USER_SELECT, component};
 use crate::views::sidebars::NavigationView;
 use chrono::{Date, Utc};
 use dominator::{Dom, class, clone, html};
-use futures_signals::signal::{Mutable, Signal, SignalExt, always, Broadcaster, ReadOnlyMutable};
-use futures_signals::signal_vec::{MutableVec, MutableVecLockRef, MutableVecLockMut, SignalVec, SignalVecExt};
+use futures_signals::signal::{Mutable, Signal, SignalExt, always, ReadOnlyMutable};
+use futures_signals::signal_vec::{MutableVec, MutableVecLockRef, MutableVecLockMut, SignalVec, SignalVecExt, MutableSignalVec};
 use once_cell::sync::Lazy;
 use snowcat_common::state::{character, Action, ChannelMessage, MessageType, MessageTypeDiscriminant};
 use snowcat_common::state::character::Character;
@@ -91,6 +91,12 @@ impl ClientScreenState {
 		self.open_channels.lock_mut()
 	}
 
+	/// Acquire a signal vec for the open channel list, for displaying its
+	/// contents
+	pub fn channels_signal_vec(&self) -> MutableSignalVec<Rc<PublicChannel>> {
+		self.open_channels.signal_vec_cloned()
+	}
+
 	/// Acquire a read-only reference to the open private conversation list,
 	/// for reading entries.
 	pub fn conversations(&self) -> MutableVecLockRef<'_, Rc<Conversation>> {
@@ -103,16 +109,28 @@ impl ClientScreenState {
 		self.open_conversations.lock_mut()
 	}
 
-	/// Acquire a read-only reference to the open private conversation list,
-	/// for reading entries.
+	/// Acquire a signal vec for the open private conversation list, for
+	/// displaying its contents
+	pub fn conversations_signal_vec(&self) -> MutableSignalVec<Rc<Conversation>> {
+		self.open_conversations.signal_vec_cloned()
+	}
+
+	/// Acquire a read-only reference to the system message list, for reading
+	/// entries.
 	pub fn system(&self) -> MutableVecLockRef<'_, Rc<SystemMessage>> {
 		self.system_messages.lock_ref()
 	}
 
-	/// Acquire a writable reference to the open private conversation list, for
-	/// adding and removing entries.
+	/// Acquire a writable reference to the system message list, for adding and
+	/// removing entries.
 	pub fn system_mut(&self) -> MutableVecLockMut<'_, Rc<SystemMessage>> {
 		self.system_messages.lock_mut()
+	}
+
+	/// Acquire a signal vec for the system message list, for displaying its
+	/// contents
+	pub fn system_signal_vec(&self) -> MutableSignalVec<Rc<SystemMessage>> {
+		self.system_messages.signal_vec_cloned()
 	}
 }
 

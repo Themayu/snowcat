@@ -495,7 +495,7 @@ mod menus {
 			.class(&*super::NAVIGATION_CONTAINER)
 			.child(view_console_entry(&state))
 
-			.children_signal_vec(state.open_channels.signal_vec_cloned().map(clone!(state => move |channel| {
+			.children_signal_vec(state.channels_signal_vec().map(clone!(state => move |channel| {
 				channel_list_item(&state, &channel, map_ref! {
 					let name = channel.name.signal_cloned(),
 					let count = channel.characters.signal_vec_cloned().len() =>
@@ -600,7 +600,7 @@ mod menus {
 			.class(&*super::NAVIGATION_CONTAINER)
 			.child(view_console_entry(&state))
 
-			.children_signal_vec(state.open_conversations.signal_vec_cloned().map(clone!(state => move |conversation| {
+			.children_signal_vec(state.conversations_signal_vec().map(clone!(state => move |conversation| {
 				private_conversation_list_entry(&state, &conversation, always(conversation.character.name.to_owned()))
 			})))
 		})

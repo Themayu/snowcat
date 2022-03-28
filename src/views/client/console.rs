@@ -41,7 +41,7 @@ pub fn render(app: Arc<App>, state: Rc<ClientScreenState>) -> Dom {
 				.class(&*component::channel::MESSAGE_AREA)
 				.class(&*component::channel::notification::NOTIFICATION_AREA)
 
-				.children_signal_vec(state.system_messages.signal_vec_cloned().map(move |message| {
+				.children_signal_vec(state.system_signal_vec().map(move |message| {
 					html!("div", {
 						.class(&*component::channel::notification::NOTIFICATION)
 
