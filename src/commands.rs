@@ -7,7 +7,7 @@ use snowcat_common::settings::Settings as CommonSettings;
 pub struct GetSettingsCommand;
 impl GetSettingsCommand {
 	pub async fn invoke(&self) -> Result<AppSettings, error::CommandError> {
-		tauri::invoke_fallible("settings_get", None::<&()>).map_ok(|value: Option<CommonSettings>| {
+		tauri::try_invoke("settings_get", None::<&()>).map_ok(|value: Option<CommonSettings>| {
 			AppSettings::from(value.unwrap_or_else(|| {
 				unimplemented!("if this actually returns null one day I am going to throw myself off a cliff")
 			}))

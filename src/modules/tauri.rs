@@ -26,7 +26,7 @@ where Input: Serialize,
 	Ok(value)
 }
 
-pub async fn invoke_fallible<Input, Output, Error>(cmd: &str, args: Option<&Input>) -> Result<Option<Output>, Error>
+pub async fn try_invoke<Input, Output, Error>(cmd: &str, args: Option<&Input>) -> Result<Option<Output>, Error>
 where Input: Serialize,
 	  Output: DeserializeOwned,
 	  Error: DeserializeOwned,
