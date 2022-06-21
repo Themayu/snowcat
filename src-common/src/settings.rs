@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, DisplayFromStr};
 use std::collections::HashMap;
-use std::fmt::{Display, Formatter};
+use std::fmt::{Debug, Display, Formatter};
 use std::str::FromStr;
 
 const BUILTIN_DARK: &'static str = "dark";
@@ -42,6 +42,9 @@ pub struct ClientSettings {
 	pub display_size: DisplaySize,
 	pub exclude_tags: Vec<String>,
 
+	#[serde(default, rename = "use_native_appearance", with = "window_appearance")]
+	pub window_appearance: WindowAppearance,
+
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub inactivity_timer: Option<f32>,
 	pub theme: ColorScheme,
@@ -62,6 +65,7 @@ impl Default for ClientSettings {
 			inactivity_timer: Some(15.0),
 			show_avatars_in: ProfileAvatarLocations::default(),
 			theme: ColorScheme::Dark,
+			window_appearance: WindowAppearance::Native,
 		}
 	}
 }
@@ -174,6 +178,18 @@ pub enum DisplaySize {
 	/// Display all items in an expanded form if possible, including supplement
 	/// images.
 	Large,
+}
+
+#[derive(Debug, Clone)]
+pub enum WindowAppearance {
+	Custom,
+	Native,
+}
+
+impl Default for WindowAppearance {
+	fn default() -> Self {
+		WindowAppearance::Native
+	}
 }
 
 /// Where profile avatars should be displayed on the client
