@@ -8,7 +8,7 @@ const BUILTIN_DARK: &'static str = "dark";
 const BUILTIN_FCHAT: &'static str = "fchat";
 const BUILTIN_LIGHT: &'static str = "light";
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Settings {
 	#[serde(default)]
 	pub client: ClientSettings,
@@ -34,10 +34,12 @@ impl Default for Settings {
 	}
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct ClientSettings {
 	pub animate_eicons: bool,
-	pub character_name_click_opens: ClickOpenTarget,
+
+	#[serde(rename = "character_name_click_opens")]
+	pub click_open_target: ClickOpenTarget,
 	pub clock_format: ClockFormat,
 	pub display_size: DisplaySize,
 	pub exclude_tags: Vec<String>,
@@ -58,7 +60,7 @@ impl Default for ClientSettings {
 	fn default() -> Self {
 		ClientSettings {
 			animate_eicons: false,
-			character_name_click_opens: ClickOpenTarget::CharacterProfile,
+			click_open_target: ClickOpenTarget::CharacterProfile,
 			clock_format: ClockFormat::Meridiem,
 			display_size: DisplaySize::Large,
 			exclude_tags: vec![],
@@ -71,7 +73,7 @@ impl Default for ClientSettings {
 }
 
 /// What to open when a character's name is clicked.
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ClickOpenTarget {
 	/// Open the character's profile.
@@ -82,7 +84,7 @@ pub enum ClickOpenTarget {
 }
 
 /// How to display time-based elements such as message timestamps.
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub enum ClockFormat {
 	/// 12-hour format
 	#[serde(rename(
@@ -107,7 +109,7 @@ pub enum ClockFormat {
 	Plenadiem,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum ColorScheme {
 	/// A dark default color scheme based on Discord.
 	Dark,
@@ -169,7 +171,7 @@ impl Serialize for ColorScheme {
 
 /// How to display interactive elements such as messages and channels on the
 /// user interface.
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum DisplaySize {
 	/// Display items in a compact form if possible, with no supplement images.
@@ -193,7 +195,7 @@ impl Default for WindowAppearance {
 }
 
 /// Where profile avatars should be displayed on the client
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct ProfileAvatarLocations {
 	pub channels: bool,
 	pub character_lists: bool,
@@ -214,7 +216,7 @@ impl Default for ProfileAvatarLocations {
 	}
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct LoggerSettings {
 	pub log_ads: bool,
 	pub log_messages: bool,
@@ -232,7 +234,7 @@ impl Default for LoggerSettings {
 }
 
 /// How message logs should be stored by the client.
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub enum LogStorageMethod {
 	/// Stores logs via a custom binary format. Less error-prone than plain
 	/// text, but is slow to use and impossible to read with other tools.
@@ -249,7 +251,7 @@ pub enum LogStorageMethod {
 	Text,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct NotificationSettings {
 	pub in_app_notifications: bool,
 	pub in_app_notification_timer: Option<f32>,
@@ -274,7 +276,7 @@ impl Default for NotificationSettings {
 }
 
 /// What notifications should be displayed to the user
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct NotificationSets {
 	pub announcements: bool,
 	pub mentions: bool,
@@ -294,15 +296,15 @@ impl Default for NotificationSets {
 }
 
 #[serde_as]
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct KeyboardShortcuts {
 	pub use_custom_bindings: bool,
 
-	#[serde(default = "default_movement_keybinds")]
+	#[serde(default = "defaults::default_movement_keybinds")]
 	#[serde_as(as = "HashMap<DisplayFromStr, _>")]
 	pub movement: HashMap<MovementShortcut, String>,
 
-	#[serde(default = "default_text_format_keybinds")]
+	#[serde(default = "defaults::default_text_format_keybinds")]
     #[serde_as(as = "HashMap<DisplayFromStr, _>")]
     pub text_format: HashMap<TextFormatShortcut, String>,
 }
@@ -312,19 +314,20 @@ impl Default for KeyboardShortcuts {
 		KeyboardShortcuts {
 			use_custom_bindings: false,
 
-			movement: default_movement_keybinds(),
-		    text_format: default_text_format_keybinds(),
+			movement: defaults::default_movement_keybinds(),
+		    text_format: defaults::default_text_format_keybinds(),
 		}
 	}
 }
 
-#[derive(Debug, Eq, Hash, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, Eq, Hash, PartialEq, Deserialize, Serialize)]
 pub enum MovementShortcut {
 	FocusTextBox,
-	NextChannel,
+	Navigate,
+	NextItem,
 	NextSection,
 	OpenSearch,
-	PreviousChannel,
+	PreviousItem,
 	PreviousSection,
 }
 
@@ -332,9 +335,10 @@ impl Display for MovementShortcut {
 	fn fmt(&self, formatter: &mut Formatter<'_>) -> std::fmt::Result {
 		let str = match self {
 			MovementShortcut::FocusTextBox => "focus_textbox",
-			MovementShortcut::NextChannel => "next_channel",
+			MovementShortcut::Navigate => "navigate",
+			MovementShortcut::NextItem => "next_channel",
 			MovementShortcut::NextSection => "next_section",
-			MovementShortcut::PreviousChannel => "previous_channel",
+			MovementShortcut::PreviousItem => "previous_channel",
 			MovementShortcut::PreviousSection => "previous_section",
 			MovementShortcut::OpenSearch => "open_search",
 		};
@@ -349,9 +353,10 @@ impl FromStr for MovementShortcut {
 	fn from_str(value: &str) -> Result<Self, Self::Err> {
 		match value {
 			"focus_textbox" => Ok(MovementShortcut::FocusTextBox),
-			"next_channel" => Ok(MovementShortcut::NextChannel),
+			"navigate" => Ok(MovementShortcut::Navigate),
+			"next_channel" => Ok(MovementShortcut::NextItem),
 			"next_section" => Ok(MovementShortcut::NextSection),
-			"previous_channel" => Ok(MovementShortcut::PreviousChannel),
+			"previous_channel" => Ok(MovementShortcut::PreviousItem),
 			"previous_section" => Ok(MovementShortcut::PreviousSection),
 			"open_search" => Ok(MovementShortcut::OpenSearch),
 
@@ -360,7 +365,7 @@ impl FromStr for MovementShortcut {
 	}
 }
 
-#[derive(Debug, Eq, Hash, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, Eq, Hash, PartialEq, Deserialize, Serialize)]
 pub enum TextFormatShortcut {
     Bold,
     Color,
@@ -434,31 +439,102 @@ impl FromStr for TextFormatShortcut {
 	}
 }
 
-fn default_movement_keybinds() -> HashMap<MovementShortcut, String> {
-	HashMap::from([
-		(MovementShortcut::FocusTextBox, String::from("Tab")),
-		(MovementShortcut::NextChannel, String::from("Alt+ArrowDown")),
-		(MovementShortcut::NextSection, String::from("Alt+ArrowRight")),
-		(MovementShortcut::OpenSearch, String::from("Ctrl+KeyT")),
-		(MovementShortcut::PreviousChannel, String::from("Alt+ArrowUp")),
-		(MovementShortcut::PreviousSection, String::from("Alt+ArrowLeft")),
-	])
+pub mod defaults {
+	use crate::settings::{MovementShortcut, TextFormatShortcut};
+	use std::collections::HashMap;
+
+	pub fn default_movement_keybind(shortcut: MovementShortcut) -> String {
+		match shortcut {
+			MovementShortcut::FocusTextBox => String::from("Tab"),
+			MovementShortcut::Navigate => String::from("Tab"),
+			MovementShortcut::NextItem => String::from("Alt+ArrowDown"),
+			MovementShortcut::NextSection => String::from("Alt+ArrowRight"),
+			MovementShortcut::OpenSearch => String::from("Ctrl+KeyT"),
+			MovementShortcut::PreviousItem => String::from("Alt+ArrowUp"),
+			MovementShortcut::PreviousSection => String::from("Alt+ArrowLeft"),
+		}
+	}
+	
+	pub fn default_movement_keybinds() -> HashMap<MovementShortcut, String> {
+		HashMap::from([
+			(MovementShortcut::FocusTextBox, default_movement_keybind(MovementShortcut::FocusTextBox)),
+			(MovementShortcut::Navigate, default_movement_keybind(MovementShortcut::Navigate)),
+			(MovementShortcut::NextItem, default_movement_keybind(MovementShortcut::NextItem)),
+			(MovementShortcut::NextSection, default_movement_keybind(MovementShortcut::NextSection)),
+			(MovementShortcut::OpenSearch, default_movement_keybind(MovementShortcut::OpenSearch)),
+			(MovementShortcut::PreviousItem, default_movement_keybind(MovementShortcut::PreviousItem)),
+			(MovementShortcut::PreviousSection, default_movement_keybind(MovementShortcut::PreviousSection)),
+		])
+	}
+	
+	pub fn default_text_format_keybind(shortcut: TextFormatShortcut) -> String {
+		match shortcut {
+			TextFormatShortcut::Bold => String::from("Ctrl+KeyB"),
+			TextFormatShortcut::Color => String::from("Ctrl+KeyI"),
+			TextFormatShortcut::InsertCharacterIcon => String::from("Ctrl+KeyU"),
+			TextFormatShortcut::InsertEicon => String::from("Ctrl+KeyS"),
+			TextFormatShortcut::Italic => String::from("Ctrl+KeyD"),
+			TextFormatShortcut::LinkCharacter => String::from("Ctrl+ArrowUp"),
+			TextFormatShortcut::LinkUrl => String::from("Ctrl+ArrowDown"),
+			TextFormatShortcut::NoParse => String::from("Ctrl+KeyL"),
+			TextFormatShortcut::Spoiler => String::from("Ctrl+KeyR"),
+			TextFormatShortcut::Strikethrough => String::from("Ctrl+KeyO"),
+			TextFormatShortcut::Subscript => String::from("Ctrl+KeyE"),
+			TextFormatShortcut::Superscript => String::from("Ctrl+KeyK"),
+			TextFormatShortcut::Underline => String::from("Ctrl+KeyN"),
+		}
+	}
+	
+	pub fn default_text_format_keybinds() -> HashMap<TextFormatShortcut, String> {
+		HashMap::from([
+			(TextFormatShortcut::Bold, default_text_format_keybind(TextFormatShortcut::Bold)),
+			(TextFormatShortcut::Italic, default_text_format_keybind(TextFormatShortcut::Italic)),
+			(TextFormatShortcut::Underline, default_text_format_keybind(TextFormatShortcut::Underline)),
+			(TextFormatShortcut::Strikethrough, default_text_format_keybind(TextFormatShortcut::Strikethrough)),
+			(TextFormatShortcut::Color, default_text_format_keybind(TextFormatShortcut::Color)),
+			(TextFormatShortcut::Superscript, default_text_format_keybind(TextFormatShortcut::Superscript)),
+			(TextFormatShortcut::Subscript, default_text_format_keybind(TextFormatShortcut::Subscript)),
+			(TextFormatShortcut::LinkUrl, default_text_format_keybind(TextFormatShortcut::LinkUrl)),
+			(TextFormatShortcut::LinkCharacter, default_text_format_keybind(TextFormatShortcut::LinkCharacter)),
+			(TextFormatShortcut::InsertCharacterIcon, default_text_format_keybind(TextFormatShortcut::InsertCharacterIcon)),
+			(TextFormatShortcut::InsertEicon, default_text_format_keybind(TextFormatShortcut::InsertEicon)),
+			(TextFormatShortcut::Spoiler, default_text_format_keybind(TextFormatShortcut::Spoiler)),
+			(TextFormatShortcut::NoParse, default_text_format_keybind(TextFormatShortcut::NoParse)),
+		])
+	}
 }
 
-fn default_text_format_keybinds() -> HashMap<TextFormatShortcut, String> {
-	HashMap::from([
-		(TextFormatShortcut::Bold, String::from("Ctrl+KeyB")),
-		(TextFormatShortcut::Italic, String::from("Ctrl+KeyI")),
-		(TextFormatShortcut::Underline, String::from("Ctrl+KeyU")),
-		(TextFormatShortcut::Strikethrough, String::from("Ctrl+KeyS")),
-		(TextFormatShortcut::Color, String::from("Ctrl+KeyD")),
-		(TextFormatShortcut::Superscript, String::from("Ctrl+ArrowUp")),
-		(TextFormatShortcut::Subscript, String::from("Ctrl+ArrowDown")),
-		(TextFormatShortcut::LinkUrl, String::from("Ctrl+KeyL")),
-		(TextFormatShortcut::LinkCharacter, String::from("Ctrl+KeyR")),
-		(TextFormatShortcut::InsertCharacterIcon, String::from("Ctrl+KeyO")),
-		(TextFormatShortcut::InsertEicon, String::from("Ctrl+KeyE")),
-		(TextFormatShortcut::Spoiler, String::from("Ctrl+KeyK")),
-		(TextFormatShortcut::NoParse, String::from("Ctrl+KeyN")),
-	])
+mod window_appearance {
+    use crate::settings::WindowAppearance;
+    use serde::{Serializer, Deserializer};
+
+	pub fn deserialize<'de, D>(deserializer: D) -> Result<WindowAppearance, D::Error>
+	where D: Deserializer<'de> {
+		use serde::de::{self, Visitor};
+		use std::fmt;
+
+		struct WindowAppearanceVisitor;
+		impl<'de> Visitor<'de> for WindowAppearanceVisitor {
+			type Value = WindowAppearance;
+
+			fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+				formatter.write_str("a boolean value")
+			}
+
+			fn visit_bool<E>(self, value: bool) -> Result<Self::Value, E>
+			where E: de::Error, {
+				Ok(match value {
+					true => WindowAppearance::Native,
+					false => WindowAppearance::Custom,
+				})
+			}
+		}
+
+		deserializer.deserialize_bool(WindowAppearanceVisitor)
+	}
+
+	pub fn serialize<S>(value: &WindowAppearance, serializer: S) -> Result<S::Ok, S::Error>
+	where S: Serializer {
+		serializer.serialize_bool(matches!(value, WindowAppearance::Native))
+	}
 }

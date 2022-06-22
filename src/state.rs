@@ -480,7 +480,7 @@ pub mod settings {
 	use futures_signals::signal_vec::MutableVec;
 	use snowcat_common::settings::{
 		self as common_settings, ClickOpenTarget, ClockFormat, DisplaySize, LogStorageMethod, MovementShortcut,
-		TextFormatShortcut,
+		TextFormatShortcut, WindowAppearance, ColorScheme,
 	};
 	use std::collections::HashMap;
 
@@ -489,7 +489,7 @@ pub mod settings {
 	pub struct AppSettings {
 		pub client: ClientSettings,
 		pub logger: LoggerSettings,
-		pub notifcations: NotificationSettings,
+		pub notifications: NotificationSettings,
 		pub shortcuts: KeyboardShortcuts,
 	}
 
@@ -498,7 +498,7 @@ pub mod settings {
 			AppSettings {
 				client: ClientSettings::from(settings.client),
 				logger: LoggerSettings::from(settings.logger),
-				notifcations: NotificationSettings::from(settings.notifications),
+				notifications: NotificationSettings::from(settings.notifications),
 				shortcuts: KeyboardShortcuts::from(settings.shortcuts),
 			}
 		}
@@ -507,24 +507,28 @@ pub mod settings {
 	#[derive(Debug)]
 	pub struct ClientSettings {
 		pub animate_eicons: Mutable<bool>,
-		pub character_name_click_opens: Mutable<ClickOpenTarget>,
+		pub click_open_target: Mutable<ClickOpenTarget>,
 		pub clock_format: Mutable<ClockFormat>,
 		pub display_size: Mutable<DisplaySize>,
 		pub exclude_tags: MutableVec<String>,
 		pub inactivity_timer: Mutable<Option<f32>>,
 		pub show_avatars_in: ProfileAvatarLocations,
+		pub theme: Mutable<ColorScheme>,
+		pub window_appearance: Mutable<WindowAppearance>,
 	}
 
 	impl From<common_settings::ClientSettings> for ClientSettings {
 		fn from(client: common_settings::ClientSettings) -> Self {
 			ClientSettings {
 				animate_eicons: Mutable::new(client.animate_eicons),
-				character_name_click_opens: Mutable::new(client.character_name_click_opens),
+				click_open_target: Mutable::new(client.click_open_target),
 				clock_format: Mutable::new(client.clock_format),
 				display_size: Mutable::new(client.display_size),
 				exclude_tags: MutableVec::new_with_values(client.exclude_tags),
 				inactivity_timer: Mutable::new(client.inactivity_timer),
 				show_avatars_in: ProfileAvatarLocations::from(client.show_avatars_in),
+				theme: Mutable::new(client.theme),
+				window_appearance: Mutable::new(client.window_appearance),
 			}
 		}
 	}
