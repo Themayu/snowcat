@@ -1,4 +1,5 @@
-use crate::state::settings::AppSettings;
+pub mod settings;
+
 use crate::views::client::{channel, conversation};
 use chrono::{DateTime, Utc};
 use futures_signals::signal::Mutable;
@@ -14,12 +15,12 @@ pub struct AppState {
 	channel_cache: MutableVec<Rc<PublicChannel>>,
 	character_cache: MutableVec<Rc<Character>>,
 
-	pub settings: Rc<AppSettings>,
+	pub settings: Rc<settings::AppSettings>,
 	pub user: Option<Rc<Character>>,
 }
 
 impl AppState {
-	pub fn new(settings: AppSettings) -> Rc<Self> {
+	pub fn new(settings: settings::AppSettings) -> Rc<Self> {
 		let channels: Vec<_> = mock::get_channels().into_iter().map(|channel| {
 			PublicChannel::attach_view_state(channel)
 		}).collect();
@@ -471,165 +472,6 @@ pub mod mock {
 					content: MessageType::Action(Action::Post(String::from(" - A quick glance over his shoulder tells him that, unlike what the mirror shows, Haze is not in fact at the end of the tunnel. Not that he would ever recognise her even if she was, as he has never seen her in the real world and has only the scent of her strength to go off for identifying her. A scent that has vanished; a fact that scares him. A lot. More than enough for his mind to justify a very stupid idea. Ryos lifts a paw and presses it against the surface of the mirror. The sudden appearance of his reflection on the other side shocks him more than the disappearance of the other purple dragon, though that shock is short-lived as his perspective seems to… shift. Almost as if it were leaving his body and transferring to the reflection, which stares back through the mirror to the side he was once on. Ryos lowers his paw and the body that was once him disappears from the world entirely, leaving only the body that is now him to turn around and look over the landscape behind him. The low light of the tunnels seems almost inverted in hue, but that's not the most glaring change in his surroundings or perception that he suffers. \"?kceh eht tahW\" Ryos' jaw gapes at the sound that meets his ears when he speaks. It's… it's his own voice, but… he's never heard himself speak that way before. [i]'That did NOT sound right.'[/i] He takes a step forward and almost immediate collapses to the ground as the wrong side of his body moves, but manages to catch himself before he hits the ground. \",soyR si eman yM .gnitset ,gnitseT\" He mutters to himself, almost a confirmation than anything else. \".won sdrawkcab kaeps I ,yakO\" A nod, and this time he braces himself before walking deeper into the inversely-lit tunnel of this… mirror world, careful to move his body in the inverse to how he would usually walk, to maintain gait. It's a strange sensation, but not something he can't get used to rather quickly. After all, he's dealt with worse. Is dealing with worse."))),
 				}),
 			]
-		}
-	}
-}
-
-pub mod settings {
-	use futures_signals::signal::Mutable;
-	use futures_signals::signal_vec::MutableVec;
-	use snowcat_common::settings::{
-		self as common_settings, ClickOpenTarget, ClockFormat, DisplaySize, LogStorageMethod, MovementShortcut,
-		TextFormatShortcut, WindowAppearance, ColorScheme,
-	};
-	use std::collections::HashMap;
-
-	// Stores the application settings.
-	#[derive(Debug)]
-	pub struct AppSettings {
-		pub client: ClientSettings,
-		pub logger: LoggerSettings,
-		pub notifications: NotificationSettings,
-		pub shortcuts: KeyboardShortcuts,
-	}
-
-	impl From<common_settings::Settings> for AppSettings {
-		fn from(settings: common_settings::Settings) -> Self {
-			AppSettings {
-				client: ClientSettings::from(settings.client),
-				logger: LoggerSettings::from(settings.logger),
-				notifications: NotificationSettings::from(settings.notifications),
-				shortcuts: KeyboardShortcuts::from(settings.shortcuts),
-			}
-		}
-	}
-
-	#[derive(Debug)]
-	pub struct ClientSettings {
-		pub animate_eicons: Mutable<bool>,
-		pub click_open_target: Mutable<ClickOpenTarget>,
-		pub clock_format: Mutable<ClockFormat>,
-		pub display_size: Mutable<DisplaySize>,
-		pub exclude_tags: MutableVec<String>,
-		pub inactivity_timer: Mutable<Option<f32>>,
-		pub show_avatars_in: ProfileAvatarLocations,
-		pub theme: Mutable<ColorScheme>,
-		pub window_appearance: Mutable<WindowAppearance>,
-	}
-
-	impl From<common_settings::ClientSettings> for ClientSettings {
-		fn from(client: common_settings::ClientSettings) -> Self {
-			ClientSettings {
-				animate_eicons: Mutable::new(client.animate_eicons),
-				click_open_target: Mutable::new(client.click_open_target),
-				clock_format: Mutable::new(client.clock_format),
-				display_size: Mutable::new(client.display_size),
-				exclude_tags: MutableVec::new_with_values(client.exclude_tags),
-				inactivity_timer: Mutable::new(client.inactivity_timer),
-				show_avatars_in: ProfileAvatarLocations::from(client.show_avatars_in),
-				theme: Mutable::new(client.theme),
-				window_appearance: Mutable::new(client.window_appearance),
-			}
-		}
-	}
-
-	/// Where profile avatars should be displayed on the client
-	#[derive(Debug)]
-	pub struct ProfileAvatarLocations {
-		pub channels: Mutable<bool>,
-		pub character_lists: Mutable<bool>,
-		pub console: Mutable<bool>,
-		pub private_conversations: Mutable<bool>,
-		pub profile_links: Mutable<bool>,
-	}
-
-	impl From<common_settings::ProfileAvatarLocations> for ProfileAvatarLocations {
-		fn from(profile_avatar_locations: common_settings::ProfileAvatarLocations) -> Self {
-			ProfileAvatarLocations {
-				channels: Mutable::new(profile_avatar_locations.channels),
-				character_lists: Mutable::new(profile_avatar_locations.character_lists),
-				console: Mutable::new(profile_avatar_locations.console),
-				private_conversations: Mutable::new(profile_avatar_locations.private_conversations),
-				profile_links: Mutable::new(profile_avatar_locations.profile_links),
-			}
-		}
-	}
-
-	#[derive(Debug)]
-	pub struct LoggerSettings {
-		pub log_ads: Mutable<bool>,
-		pub log_messages: Mutable<bool>,
-		pub storage_method: Mutable<LogStorageMethod>,
-	}
-
-	impl From<common_settings::LoggerSettings> for LoggerSettings {
-		fn from(logger: common_settings::LoggerSettings) -> Self {
-			LoggerSettings {
-				log_ads: Mutable::new(logger.log_ads),
-				log_messages: Mutable::new(logger.log_messages),
-				storage_method: Mutable::new(logger.storage_method),
-			}
-		}
-	}
-
-	#[derive(Debug)]
-	pub struct NotificationSettings {
-		pub in_app_notifications: Mutable<bool>,
-		pub in_app_notification_timer: Mutable<Option<f32>>,
-		pub native_notifications: Mutable<bool>,
-		pub notify_for: NotificationSets,
-		pub word_list: MutableVec<String>,
-	}
-
-	impl From<common_settings::NotificationSettings> for NotificationSettings {
-		fn from(notifications: common_settings::NotificationSettings) -> Self {
-			NotificationSettings {
-				in_app_notifications: Mutable::new(notifications.in_app_notifications),
-				in_app_notification_timer: Mutable::new(notifications.in_app_notification_timer),
-				native_notifications: Mutable::new(notifications.native_notifications),
-				notify_for: NotificationSets::from(notifications.notify_for),
-				word_list: MutableVec::new_with_values(notifications.word_list),
-			}
-		}
-	}
-
-	/// What notifications should be displayed to the user
-	#[derive(Debug)]
-	pub struct NotificationSets {
-		pub announcements: Mutable<bool>,
-		pub mentions: Mutable<bool>,
-		pub private_messages: Mutable<bool>,
-		pub word_list_entries: Mutable<bool>,
-	}
-
-	impl From<common_settings::NotificationSets> for NotificationSets {
-		fn from(notification_sets: common_settings::NotificationSets) -> Self {
-			NotificationSets {
-				announcements: Mutable::new(notification_sets.announcements),
-				mentions: Mutable::new(notification_sets.mentions),
-				private_messages: Mutable::new(notification_sets.private_messages),
-				word_list_entries: Mutable::new(notification_sets.word_list_entries),
-			}
-		}
-	}
-
-	#[derive(Debug)]
-	pub struct KeyboardShortcuts {
-		pub use_custom_bindings: Mutable<bool>,
-		pub movement: Mutable<HashMap<MovementShortcut, String>>,
-		pub text_format: Mutable<HashMap<TextFormatShortcut, String>>,
-	}
-
-	impl From<common_settings::KeyboardShortcuts> for KeyboardShortcuts {
-		fn from(shortcuts: common_settings::KeyboardShortcuts) -> Self {
-			let movement = shortcuts.movement.into_iter().map(|(key, value)| (key, value.to_owned())).collect();
-			let text_format = shortcuts.text_format.into_iter().map(|(key, value)| (key, value.to_owned())).collect();
-
-			KeyboardShortcuts {
-				use_custom_bindings: Mutable::new(shortcuts.use_custom_bindings),
-				movement: Mutable::new(movement),
-				text_format: Mutable::new(text_format),
-			}
 		}
 	}
 }
