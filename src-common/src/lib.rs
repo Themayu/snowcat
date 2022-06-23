@@ -1,6 +1,6 @@
 #![warn(rust_2018_idioms)]
-pub mod command;
 
+pub mod command;
 pub mod constants;
 pub mod error;
 pub mod helper;
@@ -10,11 +10,11 @@ pub mod state;
 pub mod theme;
 pub mod user;
 
-/// A shorthand for setting the default value on an enum.
+/// A shorthand for setting the default value on a struct or enum.
 #[macro_export]
 macro_rules! default {
 	($type: ty => $value: expr) => {
-		impl Default for $type {
+		impl ::std::default::Default for $type {
 			fn default() -> Self {
 				$value
 			}
