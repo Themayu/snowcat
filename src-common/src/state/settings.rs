@@ -1,92 +1,45 @@
+use crate::default;
 use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, DisplayFromStr};
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::fmt::{Debug, Display, Formatter};
 use std::str::FromStr;
 
-const BUILTIN_DARK: &'static str = "dark";
-const BUILTIN_FCHAT: &'static str = "fchat";
-const BUILTIN_LIGHT: &'static str = "light";
+const BUILTIN_DARK: &str = "dark";
+const BUILTIN_FCHAT: &str = "fchat";
+const BUILTIN_LIGHT: &str = "light";
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
+#[serde(default)]
 pub struct Settings {
-	#[serde(default)]
+	pub appearance: AppearanceSettings,
 	pub client: ClientSettings,
-	
-	#[serde(default)]
-	pub logger: LoggerSettings,
-
-	#[serde(default)]
+	pub keyboard_shortcuts: KeyboardShortcuts,
+	pub logs: LoggerSettings,
 	pub notifications: NotificationSettings,
-
-	#[serde(default)]
-	pub shortcuts: KeyboardShortcuts,
 }
 
-impl Default for Settings {
-	fn default() -> Self {
-		Settings {
-			client: ClientSettings::default(),
-			logger: LoggerSettings::default(),
-			notifications: NotificationSettings::default(),
-			shortcuts: KeyboardShortcuts::default(),
-		}
-	}
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct ClientSettings {
-	pub animate_eicons: bool,
-
-	#[serde(rename = "character_name_click_opens")]
-	pub click_open_target: ClickOpenTarget,
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
+#[serde(default)]
+pub struct AppearanceSettings {
 	pub clock_format: ClockFormat,
 	pub display_size: DisplaySize,
-	pub exclude_tags: Vec<String>,
-
-	#[serde(default, rename = "use_native_appearance", with = "window_appearance")]
-	pub window_appearance: WindowAppearance,
-
-	#[serde(skip_serializing_if = "Option::is_none")]
-	pub inactivity_timer: Option<f32>,
+	
+	#[serde(with = "serde_impl::color_scheme_to_string")]
 	pub theme: ColorScheme,
 
+	#[serde(rename = "use_native_appearance", with = "serde_impl::window_appearance_to_bool")]
+	pub window_appearance: WindowAppearance,
+
 	// tables must come last
-	#[serde(default)]
 	pub show_avatars_in: ProfileAvatarLocations,
 }
 
-impl Default for ClientSettings {
-	fn default() -> Self {
-		ClientSettings {
-			animate_eicons: false,
-			click_open_target: ClickOpenTarget::CharacterProfile,
-			clock_format: ClockFormat::Meridiem,
-			display_size: DisplaySize::Large,
-			exclude_tags: vec![],
-			inactivity_timer: Some(15.0),
-			show_avatars_in: ProfileAvatarLocations::default(),
-			theme: ColorScheme::Dark,
-			window_appearance: WindowAppearance::Native,
-		}
-	}
-}
-
-/// What to open when a character's name is clicked.
-#[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename_all = "snake_case")]
-pub enum ClickOpenTarget {
-	/// Open the character's profile.
-	CharacterProfile,
-
-	/// Open and focus a private messages channel with the character.
-	PrivateMessages,
-}
-
 /// How to display time-based elements such as message timestamps.
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
 pub enum ClockFormat {
 	/// 12-hour format
+	#[default]
 	#[serde(rename(
 		deserialize = "meridiem",
 		deserialize = "12-hour",
@@ -109,9 +62,11 @@ pub enum ClockFormat {
 	Plenadiem,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
+#[serde(rename_all = "snake_case")]
 pub enum ColorScheme {
 	/// A dark default color scheme based on Discord.
+	#[default]
 	Dark,
 
 	/// A purplish color scheme based on F-Chat 3.0.
@@ -124,54 +79,9 @@ pub enum ColorScheme {
 	Custom(String),
 }
 
-impl<'de> Deserialize<'de> for ColorScheme {
-	fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-	where D: serde::Deserializer<'de> {
-		use std::fmt;
-
-		struct FieldVisitor;
-		impl<'de> serde::de::Visitor<'de> for FieldVisitor {
-			type Value = ColorScheme;
-
-			fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-				write!(formatter, "a theme name")
-			}
-
-			fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
-			where E: serde::de::Error, {
-				let kind = match value {
-					self::BUILTIN_DARK => ColorScheme::Dark,
-					self::BUILTIN_FCHAT => ColorScheme::FChat,
-					self::BUILTIN_LIGHT => ColorScheme::Light,
-
-					name => ColorScheme::Custom(name.to_owned())
-				};
-
-				Ok(kind)
-			}
-		}
-
-		deserializer.deserialize_str(FieldVisitor)
-	}
-}
-
-impl Serialize for ColorScheme {
-	fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-	where S: serde::Serializer {
-		let theme = match &self {
-			ColorScheme::Dark => self::BUILTIN_DARK,
-			ColorScheme::FChat => self::BUILTIN_FCHAT,
-			ColorScheme::Light => self::BUILTIN_LIGHT,
-			ColorScheme::Custom(theme) => theme.as_str()
-		};
-
-		serializer.serialize_str(theme)
-	}
-}
-
 /// How to display interactive elements such as messages and channels on the
 /// user interface.
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum DisplaySize {
 	/// Display items in a compact form if possible, with no supplement images.
@@ -179,148 +89,124 @@ pub enum DisplaySize {
 
 	/// Display all items in an expanded form if possible, including supplement
 	/// images.
+	#[default]
 	Large,
-}
-
-#[derive(Debug, Clone)]
-pub enum WindowAppearance {
-	Custom,
-	Native,
-}
-
-impl Default for WindowAppearance {
-	fn default() -> Self {
-		WindowAppearance::Native
-	}
 }
 
 /// Where profile avatars should be displayed on the client
 #[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(default)]
 pub struct ProfileAvatarLocations {
 	pub channels: bool,
-	pub character_lists: bool,
 	pub console: bool,
-	pub private_conversations: bool,
+	pub private_messages: bool,
 	pub profile_links: bool,
+	pub system_messages: bool,
 }
 
-impl Default for ProfileAvatarLocations {
-	fn default() -> Self {
-		ProfileAvatarLocations {
-			channels: true,
-			character_lists: true,
-			console: true,
-			private_conversations: true,
-			profile_links: true,
-		}
-	}
-}
+default!(ProfileAvatarLocations => ProfileAvatarLocations {
+	channels: true,
+	console: true,
+	private_messages: true,
+	profile_links: true,
+	system_messages: true,
+});
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct LoggerSettings {
-	pub log_ads: bool,
-	pub log_messages: bool,
-	pub storage_method: LogStorageMethod,
-}
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum WindowAppearance {
+	Custom,
 
-impl Default for LoggerSettings {
-	fn default() -> Self {
-		LoggerSettings {
-			log_ads: true,
-			log_messages: true,
-			storage_method: LogStorageMethod::Database,
-		}
-	}
-}
-
-/// How message logs should be stored by the client.
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub enum LogStorageMethod {
-	/// Stores logs via a custom binary format. Less error-prone than plain
-	/// text, but is slow to use and impossible to read with other tools.
-	Binary,
-
-	/// Stores logs via a quick and robust embedded database engine. Provides
-	/// fast read and write times, but requires special tools to read logs
-	/// outside of Snowcat.
-	Database,
-
-	/// Stores logs via plain text files. Easy to read ouutside of Snowcat, but
-	/// is the slowest and most error-prone storage option, and vulnerable to
-	/// message fabrication. Not recommended.
-	Text,
+	#[default]
+	Native,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct NotificationSettings {
-	pub in_app_notifications: bool,
-	pub in_app_notification_timer: Option<f32>,
-	pub native_notifications: bool,
-	pub word_list: Vec<String>,
+#[serde(default)]
+pub struct ClientSettings {
+	pub animate_eicons: bool,
+
+	#[serde(rename = "character_name_click_opens")]
+	pub click_open_target: ClickOpenTarget,
+	pub exclude_tags: Vec<String>,
 
 	// tables must come last
-	#[serde(default)]
-	pub notify_for: NotificationSets,
+	pub inactivity_timer: InactivityTimer,
+	pub system_messages: SystemMessages,
 }
 
-impl Default for NotificationSettings {
-	fn default() -> Self {
-		NotificationSettings {
-			in_app_notifications: false,
-			in_app_notification_timer: None,
-			native_notifications: true,
-			notify_for: NotificationSets::default(),
-			word_list: vec![],
-		}
-	}
+default!(ClientSettings => ClientSettings {
+	animate_eicons: true,
+	click_open_target: ClickOpenTarget::default(),
+	exclude_tags: Vec::default(),
+	inactivity_timer: InactivityTimer::default(),
+	system_messages: SystemMessages::default(),
+});
+
+/// What to open when a character's name is clicked.
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ClickOpenTarget {
+	/// Open the character's profile.
+	#[default]
+	CharacterProfile,
+
+	/// Open and focus a private messages channel with the character.
+	PrivateMessages,
 }
 
-/// What notifications should be displayed to the user
+/// How long to wait before setting the user's status to idle.
 #[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct NotificationSets {
-	pub announcements: bool,
-	pub mentions: bool,
-	pub private_messages: bool,
-	pub word_list_entries: bool,
+#[serde(default)]
+pub struct InactivityTimer {
+	pub enabled: bool,
+	pub timer: f32,
 }
 
-impl Default for NotificationSets {
-	fn default() -> Self {
-		NotificationSets {
-			announcements: true,
-			mentions: true,
-			private_messages: true,
-			word_list_entries: false,
-		}
-	}
+default!(InactivityTimer => InactivityTimer {
+	enabled: true,
+	timer: 15.0,
+});
+
+/// Where to show messages from the F-Chat server.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(default)]
+pub struct SystemMessages {
+	pub enabled: bool,
+	pub display_in_console: bool,
+	pub display_in_chats: bool,
+	pub notify: bool,
 }
+
+default!(SystemMessages => SystemMessages {
+	enabled: true,
+	display_in_console: true,
+	display_in_chats: true,
+	notify: true,
+});
 
 #[serde_as]
 #[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(default)]
 pub struct KeyboardShortcuts {
 	pub use_custom_bindings: bool,
 
-	#[serde(default = "defaults::default_movement_keybinds")]
-	#[serde_as(as = "HashMap<DisplayFromStr, _>")]
-	pub movement: HashMap<MovementShortcut, String>,
+	// tables must come last
+	#[serde_as(as = "BTreeMap<DisplayFromStr, _>")]
+	pub movement: BTreeMap<MovementShortcut, String>,
 
-	#[serde(default = "defaults::default_text_format_keybinds")]
-    #[serde_as(as = "HashMap<DisplayFromStr, _>")]
-    pub text_format: HashMap<TextFormatShortcut, String>,
+	#[serde_as(as = "BTreeMap<DisplayFromStr, _>")]
+	pub text_format: BTreeMap<TextFormatShortcut, String>,
 }
 
-impl Default for KeyboardShortcuts {
-	fn default() -> Self {
-		KeyboardShortcuts {
-			use_custom_bindings: false,
+default!(KeyboardShortcuts => KeyboardShortcuts {
+	movement: defaults::default_movement_keybinds(),
+	text_format: defaults::default_text_format_keybinds(),
+	use_custom_bindings: false,
+});
 
-			movement: defaults::default_movement_keybinds(),
-		    text_format: defaults::default_text_format_keybinds(),
-		}
-	}
-}
-
-#[derive(Debug, Clone, Eq, Hash, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, Eq, Hash, Ord, PartialEq, PartialOrd, Deserialize, Serialize)]
+#[serde(rename_all = "snake_case")]
 pub enum MovementShortcut {
 	FocusTextBox,
 	Navigate,
@@ -365,7 +251,8 @@ impl FromStr for MovementShortcut {
 	}
 }
 
-#[derive(Debug, Clone, Eq, Hash, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, Eq, Hash, Ord, PartialEq, PartialOrd, Deserialize, Serialize)]
+#[serde(rename_all = "snake_case")]
 pub enum TextFormatShortcut {
     Bold,
     Color,
@@ -439,9 +326,97 @@ impl FromStr for TextFormatShortcut {
 	}
 }
 
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(default)]
+pub struct LoggerSettings {
+	pub log_ads: bool,
+	pub log_messages: bool,
+	pub storage_method: LogStorageMethod,
+}
+
+default!(LoggerSettings => LoggerSettings {
+	log_ads: true,
+	log_messages: true,
+	storage_method: LogStorageMethod::default(),
+});
+
+/// How message logs should be stored by the client.
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum LogStorageMethod {
+	/// Stores logs via a custom binary format. Less error-prone than plain
+	/// text, but is slow to use and impossible to read with other tools.
+	Binary,
+
+	/// Stores logs via a quick and robust embedded database engine. Provides
+	/// fast read and write times, but requires special tools to read logs
+	/// outside of Snowcat.
+	#[default]
+	Database,
+
+	/// Stores logs via plain text files. Easy to read ouutside of Snowcat, but
+	/// is the slowest and most error-prone storage option, and vulnerable to
+	/// message fabrication. Not recommended.
+	Text,
+}
+
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
+#[serde(default)]
+pub struct NotificationSettings {
+	pub word_list: Vec<String>,
+
+	// tables must come last
+	pub in_app_notifications: InAppNotificationSettings,
+	pub native_notifications: NativeNotificationSettings,
+	pub notification_types: NotificationTypes,
+}
+
+/// Settings for in-app notifications, if enabled.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(default)]
+pub struct InAppNotificationSettings {
+	pub enabled: bool,
+	pub auto_dismiss: bool,
+	pub dismissal_timer: f32,
+}
+
+default!(InAppNotificationSettings => InAppNotificationSettings {
+	enabled: true,
+	auto_dismiss: true,
+	dismissal_timer: 15.0,
+});
+
+/// Settings for native notifications, if enabled.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(default)]
+pub struct NativeNotificationSettings {
+	pub enabled: bool,
+}
+
+default!(NativeNotificationSettings => NativeNotificationSettings {
+	enabled: true,
+});
+
+/// What notifications should be displayed to the user.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(default)]
+pub struct NotificationTypes {
+	pub announcements: bool,
+	pub mentions: bool,
+	pub private_messages: bool,
+	pub word_list: bool,
+}
+
+default!(NotificationTypes => NotificationTypes {
+	announcements: true,
+	mentions: true,
+	private_messages: true,
+	word_list: true,
+});
+
 pub mod defaults {
-	use crate::settings::{MovementShortcut, TextFormatShortcut};
-	use std::collections::HashMap;
+	use crate::state::settings::{MovementShortcut, TextFormatShortcut};
+	use std::collections::BTreeMap;
 
 	pub fn default_movement_keybind(shortcut: MovementShortcut) -> String {
 		match shortcut {
@@ -455,8 +430,8 @@ pub mod defaults {
 		}
 	}
 	
-	pub fn default_movement_keybinds() -> HashMap<MovementShortcut, String> {
-		HashMap::from([
+	pub fn default_movement_keybinds() -> BTreeMap<MovementShortcut, String> {
+		BTreeMap::from([
 			(MovementShortcut::FocusTextBox, default_movement_keybind(MovementShortcut::FocusTextBox)),
 			(MovementShortcut::Navigate, default_movement_keybind(MovementShortcut::Navigate)),
 			(MovementShortcut::NextItem, default_movement_keybind(MovementShortcut::NextItem)),
@@ -485,8 +460,8 @@ pub mod defaults {
 		}
 	}
 	
-	pub fn default_text_format_keybinds() -> HashMap<TextFormatShortcut, String> {
-		HashMap::from([
+	pub fn default_text_format_keybinds() -> BTreeMap<TextFormatShortcut, String> {
+		BTreeMap::from([
 			(TextFormatShortcut::Bold, default_text_format_keybind(TextFormatShortcut::Bold)),
 			(TextFormatShortcut::Italic, default_text_format_keybind(TextFormatShortcut::Italic)),
 			(TextFormatShortcut::Underline, default_text_format_keybind(TextFormatShortcut::Underline)),
@@ -504,37 +479,86 @@ pub mod defaults {
 	}
 }
 
-mod window_appearance {
-    use crate::settings::WindowAppearance;
-    use serde::{Serializer, Deserializer};
+mod serde_impl {
+	pub mod color_scheme_to_string {
+		use crate::state::settings::{BUILTIN_DARK, BUILTIN_FCHAT, BUILTIN_LIGHT, ColorScheme};
+		use serde::{Serializer, Deserializer};
 
-	pub fn deserialize<'de, D>(deserializer: D) -> Result<WindowAppearance, D::Error>
-	where D: Deserializer<'de> {
-		use serde::de::{self, Visitor};
-		use std::fmt;
-
-		struct WindowAppearanceVisitor;
-		impl<'de> Visitor<'de> for WindowAppearanceVisitor {
-			type Value = WindowAppearance;
-
-			fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-				formatter.write_str("a boolean value")
+		pub fn deserialize<'de, D>(deserializer: D) -> Result<ColorScheme, D::Error>
+		where D: Deserializer<'de> {
+			use serde::de::{self, Visitor};
+			use std::fmt;
+	
+			struct FieldVisitor;
+			impl<'de> Visitor<'de> for FieldVisitor {
+				type Value = ColorScheme;
+	
+				fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+					write!(formatter, "a theme name")
+				}
+	
+				fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+				where E: de::Error, {
+					let kind = match value {
+						BUILTIN_DARK => ColorScheme::Dark,
+						BUILTIN_FCHAT => ColorScheme::FChat,
+						BUILTIN_LIGHT => ColorScheme::Light,
+	
+						name => ColorScheme::Custom(name.to_owned())
+					};
+	
+					Ok(kind)
+				}
 			}
-
-			fn visit_bool<E>(self, value: bool) -> Result<Self::Value, E>
-			where E: de::Error, {
-				Ok(match value {
-					true => WindowAppearance::Native,
-					false => WindowAppearance::Custom,
-				})
-			}
+	
+			deserializer.deserialize_str(FieldVisitor)
 		}
-
-		deserializer.deserialize_bool(WindowAppearanceVisitor)
+		
+		pub fn serialize<S>(value: &ColorScheme, serializer: S) -> Result<S::Ok, S::Error>
+		where S: Serializer {
+			let theme = match &value {
+				ColorScheme::Dark => self::BUILTIN_DARK,
+				ColorScheme::FChat => self::BUILTIN_FCHAT,
+				ColorScheme::Light => self::BUILTIN_LIGHT,
+				ColorScheme::Custom(theme) => theme.as_str()
+			};
+	
+			serializer.serialize_str(theme)
+		}	
 	}
 
-	pub fn serialize<S>(value: &WindowAppearance, serializer: S) -> Result<S::Ok, S::Error>
-	where S: Serializer {
-		serializer.serialize_bool(matches!(value, WindowAppearance::Native))
+	pub mod window_appearance_to_bool {
+		use crate::state::settings::WindowAppearance;
+		use serde::{Serializer, Deserializer};
+	
+		pub fn deserialize<'de, D>(deserializer: D) -> Result<WindowAppearance, D::Error>
+		where D: Deserializer<'de> {
+			use serde::de::{self, Visitor};
+			use std::fmt;
+	
+			struct WindowAppearanceVisitor;
+			impl<'de> Visitor<'de> for WindowAppearanceVisitor {
+				type Value = WindowAppearance;
+	
+				fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+					formatter.write_str("a boolean value")
+				}
+	
+				fn visit_bool<E>(self, value: bool) -> Result<Self::Value, E>
+				where E: de::Error, {
+					Ok(match value {
+						true => WindowAppearance::Native,
+						false => WindowAppearance::Custom,
+					})
+				}
+			}
+	
+			deserializer.deserialize_bool(WindowAppearanceVisitor)
+		}
+	
+		pub fn serialize<S>(value: &WindowAppearance, serializer: S) -> Result<S::Ok, S::Error>
+		where S: Serializer {
+			serializer.serialize_bool(matches!(value, WindowAppearance::Native))
+		}
 	}
 }

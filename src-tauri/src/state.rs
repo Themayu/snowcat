@@ -1,7 +1,7 @@
 mod mock;
 
-use snowcat_common::settings::Settings;
 use snowcat_common::state::character::Character;
+use snowcat_common::state::settings::Settings;
 use std::collections::HashMap;
 use std::ops::{Deref, DerefMut};
 

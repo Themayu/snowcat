@@ -2,7 +2,7 @@ use crate::modules::tauri;
 use crate::state::settings::AppSettings;
 use futures::TryFutureExt;
 use snowcat_common::error;
-use snowcat_common::settings::Settings as CommonSettings;
+use snowcat_common::state::settings::{self, Settings as CommonSettings};
 
 pub struct GetSettingsCommand;
 impl GetSettingsCommand {
