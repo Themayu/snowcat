@@ -1,5 +1,5 @@
 use snowcat_common::error;
-use snowcat_common::settings::Settings;
+use snowcat_common::state::settings::Settings;
 use tauri;
 
 #[tauri::command]
