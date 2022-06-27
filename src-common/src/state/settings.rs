@@ -54,11 +54,11 @@ pub enum AppearanceSettingsUpdate {
 	SetClockFormat(ClockFormat),
 	SetDisplaySize(DisplaySize),
 	SetColorScheme(#[serde(with = "serde_impl::color_scheme_to_string")] ColorScheme),
-	SetCustomTitlebar(bool),
+	SetWindowAppearance(WindowAppearance),
 }
 
 /// How to display time-based elements such as message timestamps.
-#[derive(Debug, Clone, Default, Deserialize, Serialize)]
+#[derive(Debug, Clone, Default, PartialEq, Deserialize, Serialize)]
 pub enum ClockFormat {
 	/// 12-hour format
 	#[default]
@@ -84,7 +84,7 @@ pub enum ClockFormat {
 	Plenadiem,
 }
 
-#[derive(Debug, Clone, Default, Deserialize, Serialize)]
+#[derive(Debug, Clone, Default, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ColorScheme {
 	/// A dark default color scheme based on Discord.
@@ -103,7 +103,7 @@ pub enum ColorScheme {
 
 /// How to display interactive elements such as messages and channels on the
 /// user interface.
-#[derive(Debug, Clone, Default, Deserialize, Serialize)]
+#[derive(Debug, Clone, Default, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum DisplaySize {
 	/// Display items in a compact form if possible, with no supplement images.
@@ -134,7 +134,7 @@ default!(ProfileAvatarLocations => ProfileAvatarLocations {
 	system_messages: true,
 });
 
-#[derive(Debug, Clone, Default, Deserialize, Serialize)]
+#[derive(Debug, Clone, Default, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum WindowAppearance {
 	Custom,
@@ -185,7 +185,7 @@ pub enum ClientSettingsUpdate {
 }
 
 /// What to open when a character's name is clicked.
-#[derive(Debug, Clone, Default, Deserialize, Serialize)]
+#[derive(Debug, Clone, Default, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ClickOpenTarget {
 	/// Open the character's profile.
@@ -399,7 +399,7 @@ pub enum LoggerSettingsUpdate {
 }
 
 /// How message logs should be stored by the client.
-#[derive(Debug, Clone, Default, Deserialize, Serialize)]
+#[derive(Debug, Clone, Default, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum LogStorageMethod {
 	/// Stores logs via a custom binary format. Less error-prone than plain
