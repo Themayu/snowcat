@@ -5,7 +5,6 @@ pub mod constants;
 pub mod error;
 pub mod helper;
 pub mod remote;
-pub mod settings;
 pub mod state;
 pub mod theme;
 pub mod user;

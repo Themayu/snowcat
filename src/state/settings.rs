@@ -2,6 +2,7 @@ use futures_signals::signal::Mutable;
 use futures_signals::signal_map::MutableBTreeMap;
 use futures_signals::signal_vec::MutableVec;
 use snowcat_common::state::settings as common_settings;
+use levenshtein_diff::{Edit, distance, generate_edits};
 
 #[derive(Debug)]
 pub struct Settings {
@@ -13,6 +14,36 @@ pub struct Settings {
 }
 
 impl Settings {
+	/// Construct a list of differences between this configuration fragment and
+	/// another one.
+	pub fn diff(&self, other: &Self) -> Vec<common_settings::SettingsUpdate> {
+		use common_settings::SettingsUpdate;
+
+		let mut diff = Vec::new();
+
+		diff.extend(self.appearance.diff(&other.appearance).into_iter().map(|value| {
+			SettingsUpdate::AppearanceSettingsUpdate(value)
+		}));
+
+		diff.extend(self.client.diff(&other.client).into_iter().map(|value| {
+			SettingsUpdate::ClientSettingsUpdate(value)
+		}));
+
+		diff.extend(self.keyboard_shortcuts.diff(&other.keyboard_shortcuts).into_iter().map(|value| {
+			SettingsUpdate::KeyboardShortcutUpdate(value)
+		}));
+
+		diff.extend(self.logs.diff(&other.logs).into_iter().map(|value| {
+			SettingsUpdate::LoggerSettingsUpdate(value)
+		}));
+
+		diff.extend(self.notifications.diff(&other.notifications).into_iter().map(|value| {
+			SettingsUpdate::NotificationSettingsUpdate(value)
+		}));
+
+		diff
+	}
+
 	/// Merge a configuration fragment into this one, overwriting values if
 	/// required.
 	pub fn merge(&self, other: common_settings::Settings) {
@@ -46,6 +77,61 @@ pub struct AppearanceSettings {
 }
 
 impl AppearanceSettings {
+	/// Construct a list of differences between this configuration fragment and
+	/// another one.
+	pub fn diff(&self, other: &Self) -> Vec<common_settings::AppearanceSettingsUpdate> {
+		use common_settings::AppearanceSettingsUpdate;
+
+		let mut diff = Vec::new();
+
+		let clock_format = other.clock_format.get_cloned();
+		if self.clock_format.get_cloned() != clock_format {
+			diff.push(AppearanceSettingsUpdate::SetClockFormat(clock_format));
+		}
+
+		let display_size = other.display_size.get_cloned();
+		if self.display_size.get_cloned() != display_size {
+			diff.push(AppearanceSettingsUpdate::SetDisplaySize(display_size));
+		}
+
+		let show_avatars_in_channels = other.show_avatars_in.channels.get();
+		if self.show_avatars_in.channels.get() != show_avatars_in_channels {
+			diff.push(AppearanceSettingsUpdate::SetAvatarsInChannels(show_avatars_in_channels));
+		}
+
+		let show_avatars_in_console = other.show_avatars_in.console.get();
+		if self.show_avatars_in.console.get() != show_avatars_in_console {
+			diff.push(AppearanceSettingsUpdate::SetAvatarsInConsole(show_avatars_in_console));
+		}
+
+		let show_avatars_in_private_messages = other.show_avatars_in.private_messages.get();
+		if self.show_avatars_in.private_messages.get() != show_avatars_in_private_messages {
+			diff.push(AppearanceSettingsUpdate::SetAvatarsInPrivateMessages(show_avatars_in_private_messages));
+		}
+
+		let show_avatars_in_profile_links = other.show_avatars_in.profile_links.get();
+		if self.show_avatars_in.profile_links.get() != show_avatars_in_profile_links {
+			diff.push(AppearanceSettingsUpdate::SetAvatarsInProfileLinks(show_avatars_in_profile_links));
+		}
+
+		let show_avatars_in_system_messages = other.show_avatars_in.system_messages.get();
+		if self.show_avatars_in.system_messages.get() != show_avatars_in_system_messages {
+			diff.push(AppearanceSettingsUpdate::SetAvatarsInSystemMessages(show_avatars_in_system_messages));
+		}
+
+		let theme = other.theme.get_cloned();
+		if self.theme.get_cloned() != theme {
+			diff.push(AppearanceSettingsUpdate::SetColorScheme(theme));
+		}
+
+		let window_appearance = other.window_appearance.get_cloned();
+		if self.window_appearance.get_cloned() != window_appearance {
+			diff.push(AppearanceSettingsUpdate::SetWindowAppearance(window_appearance));
+		}
+
+		diff
+	}
+
 	/// Merge a configuration fragment into this one, overwriting values if
 	/// required.
 	pub fn merge(&self, other: common_settings::AppearanceSettings) {
@@ -111,6 +197,76 @@ pub struct ClientSettings {
 }
 
 impl ClientSettings {
+	/// Construct a list of differences between this configuration fragment and
+	/// another one.
+	pub fn diff(&self, other: &Self) -> Vec<common_settings::ClientSettingsUpdate> {
+		use common_settings::ClientSettingsUpdate;
+
+		let mut diff = Vec::new();
+
+		let animate_eicons = other.animate_eicons.get();
+		if self.animate_eicons.get() != animate_eicons {
+			diff.push(ClientSettingsUpdate::SetAnimateEIcons(animate_eicons));
+		}
+
+		let click_open_target = other.click_open_target.get_cloned();
+		if self.click_open_target.get_cloned() != click_open_target {
+			diff.push(ClientSettingsUpdate::SetClickOpenTarget(click_open_target));
+		}
+
+		{
+			let own_excluded_tags = self.exclude_tags.lock_ref();
+			let other_excluded_tags = other.exclude_tags.lock_ref();
+
+			let (distance, matrix) = distance(&own_excluded_tags, &other_excluded_tags);
+			log::debug!("word_list collections have levenshtein distance of {distance}");
+
+			let edits = generate_edits(&own_excluded_tags, &other_excluded_tags, &matrix).unwrap_or_else(|_| {
+				unreachable!("we just generated these distances")
+			});
+
+			diff.extend(edits.into_iter().map(|edit| match edit {
+				Edit::Delete(position) => ClientSettingsUpdate::RemoveExcludedTagsEntry(own_excluded_tags[position].to_owned()),
+				Edit::Insert(_, value) => ClientSettingsUpdate::AddExcludedTagsEntry(value),
+				Edit::Substitute(position, new) => ClientSettingsUpdate::AlterExcludedTagsEntry {
+					old: own_excluded_tags[position].to_owned(), new
+				},
+			}));
+		}
+
+		let inactivity_timer_enabled = other.inactivity_timer.enabled.get();
+		if self.inactivity_timer.enabled.get() != inactivity_timer_enabled {
+			diff.push(ClientSettingsUpdate::SetInactivityTimerEnabled(inactivity_timer_enabled));
+		}
+
+		let inactivity_timer = other.inactivity_timer.timer.get();
+		if self.inactivity_timer.timer.get() != inactivity_timer {
+			diff.push(ClientSettingsUpdate::SetInactivityTimer(inactivity_timer));
+		}
+
+		let system_messages_enabled = other.system_messages.enabled.get();
+		if self.system_messages.enabled.get() != system_messages_enabled {
+			diff.push(ClientSettingsUpdate::SetSystemMessagesEnabled(system_messages_enabled));
+		}
+
+		let sm_display_in_chats = other.system_messages.display_in_chats.get();
+		if self.system_messages.display_in_chats.get() != sm_display_in_chats {
+			diff.push(ClientSettingsUpdate::SetDisplaySystemMessagesInActiveChannel(sm_display_in_chats));
+		}
+
+		let sm_display_in_console = other.system_messages.display_in_console.get();
+		if self.system_messages.display_in_console.get() != sm_display_in_console {
+			diff.push(ClientSettingsUpdate::SetDisplaySystemMessagesInConsole(sm_display_in_console));
+		}
+
+		let sm_notify = other.system_messages.notify.get();
+		if self.system_messages.notify.get() != sm_notify {
+			diff.push(ClientSettingsUpdate::SetSystemMessageNotifications(sm_notify));
+		}
+
+		diff
+	}
+
 	/// Merge a configuration fragment into this one, overwriting values if
 	/// required.
 	pub fn merge(&self, other: common_settings::ClientSettings) {
@@ -194,6 +350,51 @@ pub struct KeyboardShortcuts {
 }
 
 impl KeyboardShortcuts {
+	/// Construct a list of differences between this configuration fragment and
+	/// another one.
+	pub fn diff(&self, other: &Self) -> Vec<common_settings::KeyboardShortcutUpdate> {
+		use common_settings::KeyboardShortcutUpdate;
+
+		let mut diff = Vec::new();
+
+		{
+			let own_movement = self.movement.lock_ref();
+			let other_movement = other.movement.lock_ref();
+
+			own_movement.keys()
+				.map(|key| (
+					key.clone(),
+					own_movement[key].to_owned(),
+					other_movement[key].to_owned(),
+				))
+				.for_each(|item| if item.1 != item.2 {
+					diff.push(KeyboardShortcutUpdate::SetMovementShortcut(item.0, item.2))
+				});
+		}
+
+		{
+			let own_text_format = self.text_format.lock_ref();
+			let other_text_format = other.text_format.lock_ref();
+
+			own_text_format.keys()
+				.map(|key| (
+					key.clone(),
+					own_text_format[key].to_owned(),
+					other_text_format[key].to_owned(),
+				))
+				.for_each(|item| if item.1 != item.2 {
+					diff.push(KeyboardShortcutUpdate::SetTextFormatShortcut(item.0, item.2))
+				});
+		}
+
+		let use_custom_keybinds = other.use_custom_bindings.get();
+		if self.use_custom_bindings.get() != use_custom_keybinds {
+			diff.push(KeyboardShortcutUpdate::SetCustomBindings(use_custom_keybinds));
+		}
+
+		diff
+	}
+	
 	/// Merge a configuration fragment into this one, overwriting values if
 	/// required.
 	pub fn merge(&self, other: common_settings::KeyboardShortcuts) {
@@ -221,6 +422,26 @@ pub struct LoggerSettings {
 }
 
 impl LoggerSettings {
+	/// Construct a list of differences between this configuration fragment and
+	/// another one.
+	pub fn diff(&self, other: &Self) -> Vec<common_settings::LoggerSettingsUpdate> {
+		use common_settings::LoggerSettingsUpdate;
+
+		let mut diff = Vec::new();
+
+		let log_ads = other.log_ads.get();
+		if self.log_ads.get() != log_ads {
+			diff.push(LoggerSettingsUpdate::SetLogAds(log_ads));
+		}
+
+		let log_messages = other.log_messages.get();
+		if self.log_messages.get() != log_messages {
+			diff.push(LoggerSettingsUpdate::SetLogMessages(log_messages));
+		}
+
+		diff
+	}
+
 	/// Merge a configuration fragment into this one, overwriting values if
 	/// required.
 	pub fn merge(&self, other: common_settings::LoggerSettings) {
@@ -249,6 +470,76 @@ pub struct NotificationSettings {
 }
 
 impl NotificationSettings {
+	/// Construct a list of differences between this configuration fragment and
+	/// another one.
+	pub fn diff(&self, other: &Self) -> Vec<common_settings::NotificationSettingsUpdate> {
+		use common_settings::NotificationSettingsUpdate;
+
+		let mut diff = Vec::new();
+
+		let ian_auto_dismiss = other.in_app_notifications.auto_dismiss.get();
+		if self.in_app_notifications.auto_dismiss.get() != ian_auto_dismiss {
+			diff.push(NotificationSettingsUpdate::SetInAppNotificationAutoDismiss(ian_auto_dismiss));
+		}
+
+		let ian_dismissal_timer = other.in_app_notifications.dismissal_timer.get();
+		if self.in_app_notifications.dismissal_timer.get() != ian_dismissal_timer {
+			diff.push(NotificationSettingsUpdate::SetInAppNotificationDismissalTimer(ian_dismissal_timer));
+		}
+
+		let ian_enabled = other.in_app_notifications.enabled.get();
+		if self.in_app_notifications.enabled.get() != ian_enabled {
+			diff.push(NotificationSettingsUpdate::SetInAppNotifications(ian_enabled));
+		}
+
+		let native_enabled = other.native_notifications.enabled.get();
+		if self.native_notifications.enabled.get() != native_enabled {
+			diff.push(NotificationSettingsUpdate::SetNativeNotifications(native_enabled));
+		}
+
+		let notify_announcements = other.notification_types.announcements.get();
+		if self.notification_types.announcements.get() != notify_announcements {
+			diff.push(NotificationSettingsUpdate::SetNotifyAnnouncements(notify_announcements));
+		}
+
+		let notify_mentions = other.notification_types.mentions.get();
+		if self.notification_types.mentions.get() != notify_mentions {
+			diff.push(NotificationSettingsUpdate::SetNotifyMentions(notify_mentions));
+		}
+
+		let notify_private_messages = other.notification_types.private_messages.get();
+		if self.notification_types.private_messages.get() != notify_private_messages {
+			diff.push(NotificationSettingsUpdate::SetNotifyPrivateMessages(notify_private_messages));
+		}
+
+		let notify_word_list = other.notification_types.word_list.get();
+		if self.notification_types.word_list.get() != notify_word_list {
+			diff.push(NotificationSettingsUpdate::SetNotifyWordList(notify_word_list));
+		}
+
+		{
+			let own_word_list = self.word_list.lock_ref();
+			let other_word_list = other.word_list.lock_ref();
+
+			let (distance, matrix) = distance(&own_word_list, &other_word_list);
+			log::debug!("word_list collections have levenshtein distance of {distance}");
+
+			let edits = generate_edits(&own_word_list, &other_word_list, &matrix).unwrap_or_else(|_| {
+				unreachable!("we just generated these distances")
+			});
+
+			diff.extend(edits.into_iter().map(|edit| match edit {
+				Edit::Delete(position) => NotificationSettingsUpdate::RemoveWordListEntry(own_word_list[position].to_owned()),
+				Edit::Insert(_, value) => NotificationSettingsUpdate::AddWordListEntry(value),
+				Edit::Substitute(position, new) => NotificationSettingsUpdate::AlterWordListEntry {
+					old: own_word_list[position].to_owned(), new
+				},
+			}));
+		}
+
+		diff
+	}
+
 	/// Merge a configuration fragment into this one, overwriting values if
 	/// required.
 	pub fn merge(&self, other: common_settings::NotificationSettings) {
