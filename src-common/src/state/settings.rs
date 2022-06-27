@@ -19,6 +19,14 @@ pub struct Settings {
 	pub notifications: NotificationSettings,
 }
 
+pub enum SettingsUpdate {
+	AppearanceSettingsUpdate(AppearanceSettingsUpdate),
+	ClientSettingsUpdate(ClientSettingsUpdate),
+	KeyboardShortcutUpdate(KeyboardShortcutUpdate),
+	LoggerSettingsUpdate(LoggerSettingsUpdate),
+	NotificationSettingsUpdate(NotificationSettingsUpdate),
+}
+
 #[derive(Debug, Clone, Default, Deserialize, Serialize)]
 #[serde(default)]
 pub struct AppearanceSettings {
@@ -33,6 +41,20 @@ pub struct AppearanceSettings {
 
 	// tables must come last
 	pub show_avatars_in: ProfileAvatarLocations,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub enum AppearanceSettingsUpdate {
+	SetAvatarsInChannels(bool),
+	SetAvatarsInConsole(bool),
+	SetAvatarsInPrivateMessages(bool),
+	SetAvatarsInProfileLinks(bool),
+	SetAvatarsInSystemMessages(bool),
+	
+	SetClockFormat(ClockFormat),
+	SetDisplaySize(DisplaySize),
+	SetColorScheme(#[serde(with = "serde_impl::color_scheme_to_string")] ColorScheme),
+	SetCustomTitlebar(bool),
 }
 
 /// How to display time-based elements such as message timestamps.
@@ -143,6 +165,25 @@ default!(ClientSettings => ClientSettings {
 	system_messages: SystemMessages::default(),
 });
 
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub enum ClientSettingsUpdate {
+	SetAnimateEIcons(bool),
+	SetClickOpenTarget(ClickOpenTarget),
+
+	AddExcludedTagsEntry(String),
+	AlterExcludedTagsEntry { old: String, new: String },
+	RemoveExcludedTagsEntry(String),
+	SetExcludedTags(Vec<String>),
+
+	SetInactivityTimerEnabled(bool),
+	SetInactivityTimer(f32),
+
+	SetSystemMessagesEnabled(bool),
+	SetDisplaySystemMessagesInActiveChannel(bool),
+	SetDisplaySystemMessagesInConsole(bool),
+	SetSystemMessageNotifications(bool),
+}
+
 /// What to open when a character's name is clicked.
 #[derive(Debug, Clone, Default, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -204,6 +245,17 @@ default!(KeyboardShortcuts => KeyboardShortcuts {
 	text_format: defaults::default_text_format_keybinds(),
 	use_custom_bindings: false,
 });
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub enum KeyboardShortcutUpdate {
+	SetCustomBindings(bool),
+	
+	SetMovementShortcut(MovementShortcut, String),
+	ResetMovementShortcut(MovementShortcut),
+
+	SetTextFormatShortcut(TextFormatShortcut, String),
+	ResetTextFormatShortcut(TextFormatShortcut),
+}
 
 #[derive(Debug, Clone, Eq, Hash, Ord, PartialEq, PartialOrd, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -340,6 +392,12 @@ default!(LoggerSettings => LoggerSettings {
 	storage_method: LogStorageMethod::default(),
 });
 
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub enum LoggerSettingsUpdate {
+	SetLogAds(bool),
+	SetLogMessages(bool),
+}
+
 /// How message logs should be stored by the client.
 #[derive(Debug, Clone, Default, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -369,6 +427,24 @@ pub struct NotificationSettings {
 	pub in_app_notifications: InAppNotificationSettings,
 	pub native_notifications: NativeNotificationSettings,
 	pub notification_types: NotificationTypes,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub enum NotificationSettingsUpdate {
+	AddWordListEntry(String),
+	AlterWordListEntry { old: String, new: String },
+	RemoveWordListEntry(String),
+	SetWordList(Vec<String>),
+
+	SetInAppNotifications(bool),
+	SetInAppNotificationAutoDismiss(bool),
+	SetInAppNotificationDismissalTimer(f32),
+	SetNativeNotifications(bool),
+
+	SetNotifyAnnouncements(bool),
+	SetNotifyMentions(bool),
+	SetNotifyPrivateMessages(bool),
+	SetNotifyWordList(bool),
 }
 
 /// Settings for in-app notifications, if enabled.
@@ -413,6 +489,68 @@ default!(NotificationTypes => NotificationTypes {
 	private_messages: true,
 	word_list: true,
 });
+
+pub trait SettingsContainer {
+	type Context: Debug;
+	type Error: Debug + std::error::Error;
+
+	/// Apply a change to a setting listed under the "Appearance" settings pane.
+	fn apply_appearance_setting_update(&mut self, update: AppearanceSettingsUpdate, ctx: &mut Self::Context) -> Result<(), Self::Error>;
+
+	/// Apply a change to a setting listed under the "Keyboard Shortcuts"
+	/// settings pane.
+	fn apply_keyboard_shortcut_update(&mut self, update: KeyboardShortcutUpdate, ctx: &mut Self::Context) -> Result<(), Self::Error>;
+
+	/// Apply a change to a setting listed under the "General" settings pane.
+	fn apply_client_setting_update(&mut self, update: ClientSettingsUpdate, ctx: &mut Self::Context) -> Result<(), Self::Error>;
+
+	/// Apply a change to a setting listed under the "Logger" settings pane.
+	fn apply_logger_setting_update(&mut self, update: LoggerSettingsUpdate, ctx: &mut Self::Context) -> Result<(), Self::Error>;
+
+	/// Apply a change to a setting listed under the "Notifications" settings
+	/// pane.
+	fn apply_notification_setting_update(&mut self, update: NotificationSettingsUpdate, ctx: &mut Self::Context) -> Result<(), Self::Error>;
+
+	/// Commit changes to permanent storage.
+	fn commit_changes(&self, _ctx: &mut Self::Context) -> Result<(), Self::Error> {
+		// noop
+		Ok(())
+	}
+
+	/// Apply and commit a set of configuration changes.
+	fn apply_changes(&mut self, updates: Vec<SettingsUpdate>, ctx: &mut Self::Context) -> Result<(), Self::Error> {
+		for update in updates {
+			let result = match update {
+				SettingsUpdate::AppearanceSettingsUpdate(update) => {
+					self.apply_appearance_setting_update(update, ctx)
+				},
+
+				SettingsUpdate::ClientSettingsUpdate(update) => {
+					self.apply_client_setting_update(update, ctx)
+				},
+
+				SettingsUpdate::KeyboardShortcutUpdate(update) => {
+					self.apply_keyboard_shortcut_update(update, ctx)
+				},
+
+				SettingsUpdate::LoggerSettingsUpdate(update) => {
+					self.apply_logger_setting_update(update, ctx)
+				},
+
+				SettingsUpdate::NotificationSettingsUpdate(update) => {
+					self.apply_notification_setting_update(update, ctx)
+				},
+			};
+
+			match result {
+				Ok(()) => {},
+				Err(error) => return Err(error),
+			}
+		}
+
+		self.commit_changes(ctx)
+	}
+}
 
 pub mod defaults {
 	use crate::state::settings::{MovementShortcut, TextFormatShortcut};
