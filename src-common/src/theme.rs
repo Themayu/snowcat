@@ -93,8 +93,10 @@ impl Theme {
 	/// 
 	/// # Examples
 	/// ```rust
-	/// let theme = ColourTheme::new("Dark");
-	/// let name = theme.file_path().and_then(|s| s.to_str()).unwrap()
+	/// use snowcat_common::theme::Theme;
+	///
+	/// let theme = Theme::new("Dark");
+	/// let path = theme.file_path().unwrap();
 	///
 	/// assert!(path.ends_with("dark.theme"));
 	/// ```
@@ -115,12 +117,14 @@ impl Theme {
 	/// 
 	/// # Examples
 	/// ```rust
-	/// let theme = ColourTheme::new("Dark");
+	/// use snowcat_common::theme::Theme;
+	///
+	/// let theme = Theme::new("Dark");
 	/// let name = theme.file_name();
 	/// 
 	/// assert_eq!(name, "dark.theme");
 	/// ```
-	fn file_name(&self) -> String {
+	pub fn file_name(&self) -> String {
 		format!("{}.theme", &self.name.to_lowercase())
 	}
 }
