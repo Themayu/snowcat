@@ -28,7 +28,7 @@ pub fn channels_list(_app: Arc<App>, state: Rc<ClientScreenState>) -> Dom {
 }
 
 fn channel_list_item<Title>(state: &Rc<ClientScreenState>, channel: &Rc<PublicChannel>, title: Title) -> Dom
-where Title: 'static + Signal<Item = String> {
+where Title: Signal<Item = String> + 'static {
 	html!("div", {
 		.attr("aria-role", "button")
 		.attr_signal("title", title)
