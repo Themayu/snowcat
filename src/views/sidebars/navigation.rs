@@ -440,7 +440,7 @@ mod menus {
     use std::rc::Rc;
     use std::sync::Arc;
 
-	pub fn private_conversations_list(app: Arc<App>, state: Rc<ClientScreenState>) -> Dom {
+	pub fn private_conversations_list(_app: Arc<App>, state: Rc<ClientScreenState>) -> Dom {
 		html!("div", {
 			.class(&*super::NAVIGATION_CONTAINER)
 			.child(view_console_entry(&state))
@@ -452,14 +452,16 @@ mod menus {
 	}
 
 	fn private_conversation_list_entry<Title>(
-		state: &Rc<ClientScreenState>,
-		conversation: &Rc<Conversation>,
-		title: Title,
+		_state: &Rc<ClientScreenState>,
+		_conversation: &Rc<Conversation>,
+		_title: Title,
 	) -> Dom
 	where Title: 'static + Signal<Item = String> {
-		html!("div", {
-			.text_signal(title)
-		})
+		// html!("div", {
+		// 	.text_signal(title)
+		// })
+
+		todo!("render private conversation list entries")
 	}
 
 	pub(super) fn view_console_entry(state: &Rc<ClientScreenState>) -> Dom {
