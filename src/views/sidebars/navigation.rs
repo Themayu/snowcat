@@ -473,11 +473,8 @@ mod mixins {
     use std::rc::Rc;
 	use web_sys::HtmlElement;
 
-	pub fn navigation_function_option<Text: AsRef<str>>(
-		state: &Rc<ClientScreenState>,
-		option: NavigationView,
-		text: Text
-	) -> impl FnOnce(DomBuilder<HtmlElement>) -> DomBuilder<HtmlElement> {
+	pub fn navigation_function_option(state: &Rc<ClientScreenState>, option: NavigationView, text: impl AsRef<str>)
+	-> impl FnOnce(DomBuilder<HtmlElement>) -> DomBuilder<HtmlElement> {
 		clone!(state => move |dom| {
 			apply_methods!(dom, {
 				.apply(navigation_option_shared(&state, option, text))
@@ -487,7 +484,7 @@ mod mixins {
 		})
 	}
 
-	pub fn navigation_list_option<Text: AsRef<str>>(state: &Rc<ClientScreenState>, option: NavigationView, text: Text)
+	pub fn navigation_list_option(state: &Rc<ClientScreenState>, option: NavigationView, text: impl AsRef<str>)
 	-> impl FnOnce(DomBuilder<HtmlElement>) -> DomBuilder<HtmlElement> {
 		clone!(state => move |dom| {
 			apply_methods!(dom, {
@@ -497,7 +494,7 @@ mod mixins {
 		})
 	}
 
-	fn navigation_option_shared<Text: AsRef<str>>(state: &Rc<ClientScreenState>, option: NavigationView, text: Text)
+	fn navigation_option_shared(state: &Rc<ClientScreenState>, option: NavigationView, text: impl AsRef<str>)
 	-> impl FnOnce(DomBuilder<HtmlElement>) -> DomBuilder<HtmlElement> {
 		clone!(state => move |dom| {
 			apply_methods!(dom, {
