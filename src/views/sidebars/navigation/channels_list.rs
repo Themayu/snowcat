@@ -15,7 +15,7 @@ pub fn channels_list(_app: Arc<App>, state: Rc<ClientScreenState>) -> Dom {
 		.attr("aria-live", "polite")
 		.attr("aria-role", "list")
 		.class(&*super::NAVIGATION_CONTAINER)
-		.child(super::menus::view_console_entry(&state))
+		.child(super::view_console_button(&state))
 
 		.children_signal_vec(state.channels_signal_vec().map(clone!(state => move |channel| {
 			channel_list_item(&state, &channel, map_ref! {
