@@ -401,7 +401,7 @@ where Url: 'static + Signal<Item = String>,
 }
 
 pub(super) fn view_console_button(state: &Rc<ClientScreenState>) -> Dom {
-	fn is_match<View>(view: View) -> impl Signal<Item = bool>
+	fn is_active_view_signal<View>(view: View) -> impl Signal<Item = bool>
 	where View: Signal<Item = ClientView>, {
 		view.map(|view| matches!(view, ClientView::Console))
 	}
@@ -409,7 +409,7 @@ pub(super) fn view_console_button(state: &Rc<ClientScreenState>) -> Dom {
 	html!("div", {
 		.attr("title", "Console")
 		.class(&*VIEW_SWITCH_BUTTON)
-		.class_signal(&*VIEW_SWITCH_BUTTON_ACTIVE, is_match(state.client_view.signal_cloned()))
+		.class_signal(&*VIEW_SWITCH_BUTTON_ACTIVE, is_active_view_signal(state.client_view.signal_cloned()))
 
 		.child(html!("div", {
 			.class(&*VIEW_SWITCH_BUTTON_ICON)
