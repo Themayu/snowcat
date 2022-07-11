@@ -1,11 +1,14 @@
 mod channels_list;
+mod conversations_list;
 
 use crate::App;
-use crate::styles::NO_USER_SELECT;
+use crate::styles::{classname, NO_USER_SELECT};
 use crate::styles::icon;
-use crate::views::client::ClientScreenState;
+use crate::views::client::{ClientScreenState, ClientView};
 use crate::views::sidebars::SIDEBAR;
-use dominator::{Dom, class, html, svg, pseudo, clone};
+use crate::views::sidebars::navigation::channels_list::channels_list;
+use crate::views::sidebars::navigation::conversations_list::conversations_list;
+use dominator::{Dom, EventOptions, class, clone, html, svg, pseudo};
 use futures_signals::signal::{Signal, SignalExt, always};
 use once_cell::sync::Lazy;
 use snowcat_common::state::character::CharacterStatus;
@@ -279,8 +282,8 @@ pub fn render(app: Arc<App>, state: Rc<ClientScreenState>) -> Dom {
 
 		// Screen switcher
 		.child_signal(state.navigation_view.signal_ref(clone!(app, state => move |view| match view {
-			NavigationView::Channels => Some(menus::channels_list(app.clone(), state.clone())),
-			NavigationView::PrivateMessages => Some(menus::private_conversations_list(app.clone(), state.clone())),
+			NavigationView::Channels => Some(channels_list(app.clone(), state.clone())),
+			NavigationView::PrivateMessages => Some(conversations_list(app.clone(), state.clone())),
 			view => todo!("view: {:?}", view),
 		})))
 		// End screen switcher
@@ -397,6 +400,41 @@ where Url: 'static + Signal<Item = String>,
 	})
 }
 
+pub(super) fn view_console_button(state: &Rc<ClientScreenState>) -> Dom {
+	fn is_match<View>(view: View) -> impl Signal<Item = bool>
+	where View: Signal<Item = ClientView>, {
+		view.map(|view| matches!(view, ClientView::Console))
+	}
+
+	html!("div", {
+		.attr("title", "Console")
+		.class(&*VIEW_SWITCH_BUTTON)
+		.class_signal(&*VIEW_SWITCH_BUTTON_ACTIVE, is_match(state.client_view.signal_cloned()))
+
+		.child(html!("div", {
+			.class(&*VIEW_SWITCH_BUTTON_ICON)
+			.class(&*VIEW_SWITCH_BUTTON_ICON_SYMBOL)
+			.class(&*classname::ICON)
+			.text(&*icon::CONSOLE_VIEW_GLYPH)
+		}))
+
+		.child(html!("div", {
+			.class(&*VIEW_SWITCH_BUTTON_TEXT_CONTAINER)
+			
+			.child(html!("span", {
+				.class(&*VIEW_SWITCH_BUTTON_TEXT)
+				.text("Console")
+			}))
+
+			.child(html!("span", {
+				.class(&*VIEW_SWITCH_BUTTON_SUBTEXT)
+			}))
+		}))
+
+		.event_with_options(&EventOptions::bubbles(), interactions::set_console_view_on_click(state))
+	})
+}
+
 mod interactions {
 	use crate::views::client::{ClientScreenState, ClientView};
 	use crate::views::sidebars::NavigationView;
@@ -422,80 +460,6 @@ mod interactions {
 					_ => true,
 				},
 			);
-		})
-	}
-}
-
-mod menus {
-	pub use crate::views::sidebars::navigation::channels_list::channels_list;
-
-	use super::interactions;
-	use crate::App;
-    use crate::state::Conversation;
-	use crate::styles::{classname, icon};
-    use crate::views::client::{ClientScreenState, ClientView};
-    use dominator::{Dom, EventOptions, clone, html};
-	use futures_signals::signal::{Signal, SignalExt, always};
-	use futures_signals::signal_vec::SignalVecExt;
-    use std::rc::Rc;
-    use std::sync::Arc;
-
-	pub fn private_conversations_list(_app: Arc<App>, state: Rc<ClientScreenState>) -> Dom {
-		html!("div", {
-			.class(&*super::NAVIGATION_CONTAINER)
-			.child(view_console_entry(&state))
-
-			.children_signal_vec(state.conversations_signal_vec().map(clone!(state => move |conversation| {
-				private_conversation_list_entry(&state, &conversation, always(conversation.character.name.to_owned()))
-			})))
-		})
-	}
-
-	fn private_conversation_list_entry<Title>(
-		_state: &Rc<ClientScreenState>,
-		_conversation: &Rc<Conversation>,
-		_title: Title,
-	) -> Dom
-	where Title: 'static + Signal<Item = String> {
-		// html!("div", {
-		// 	.text_signal(title)
-		// })
-
-		todo!("render private conversation list entries")
-	}
-
-	pub(super) fn view_console_entry(state: &Rc<ClientScreenState>) -> Dom {
-		fn is_match<View>(view: View) -> impl Signal<Item = bool>
-		where View: Signal<Item = ClientView>, {
-			view.map(|view| matches!(view, ClientView::Console))
-		}
-
-		html!("div", {
-			.attr("title", "Console")
-			.class(&*super::VIEW_SWITCH_BUTTON)
-			.class_signal(&*super::VIEW_SWITCH_BUTTON_ACTIVE, is_match(state.client_view.signal_cloned()))
-
-			.child(html!("div", {
-				.class(&*super::VIEW_SWITCH_BUTTON_ICON)
-				.class(&*super::VIEW_SWITCH_BUTTON_ICON_SYMBOL)
-				.class(&*classname::ICON)
-				.text(&*icon::CONSOLE_VIEW_GLYPH)
-			}))
-
-			.child(html!("div", {
-				.class(&*super::VIEW_SWITCH_BUTTON_TEXT_CONTAINER)
-				
-				.child(html!("span", {
-					.class(&*super::VIEW_SWITCH_BUTTON_TEXT)
-					.text("Console")
-				}))
-
-				.child(html!("span", {
-					.class(&*super::VIEW_SWITCH_BUTTON_SUBTEXT)
-				}))
-			}))
-
-			.event_with_options(&EventOptions::bubbles(), interactions::set_console_view_on_click(state))
 		})
 	}
 }
