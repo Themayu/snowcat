@@ -1,3 +1,5 @@
+mod channels_list;
+
 use crate::App;
 use crate::styles::NO_USER_SELECT;
 use crate::styles::icon;
@@ -396,68 +398,16 @@ where Url: 'static + Signal<Item = String>,
 }
 
 mod interactions {
-	use crate::state::PublicChannel;
 	use crate::views::client::{ClientScreenState, ClientView};
 	use crate::views::sidebars::NavigationView;
 	use dominator::clone;
 	use dominator::events::Click;
 	use std::rc::Rc;
 
-	pub(super) fn close_channel_on_click(state: &Rc<ClientScreenState>, current_channel: &Rc<PublicChannel>)
-	-> impl FnMut(Click) {
-		clone!(state, current_channel => move |event: Click| {
-			event.stop_propagation();
-
-			let mut channels = state.channels_mut();
-			let client_view = state.client_view.lock_ref();
-
-			let to_remove = channels.iter().position(|channel| channel == &current_channel).unwrap_or_else(|| {
-				unreachable!("we just issued a close request for this channel")
-			});
-
-			channels.remove(to_remove);
-
-			// If we have closed the currently active channel, try to move the
-			// user to the next available one or, failing that, the system
-			// message view.
-			if let ClientView::PublicChannel(ref view_state) = *client_view {
-				if view_state.channel() == current_channel {
-					let next_channel = channels.get(to_remove).or_else(|| channels.last());
-					let view = match next_channel {
-						Some(channel) => ClientView::PublicChannel(channel.view_state().clone()),
-						None => ClientView::Console,
-					};
-
-					drop(view_state);
-					drop(client_view);
-
-					state.client_view.set(view)
-				}
-			}
-		})
-	}
-
 	pub(super) fn set_navigation_menu_on_click(state: &Rc<ClientScreenState>, value: NavigationView)
 	-> impl FnMut(Click) {
 		clone!(state, value => move |_: Click| {
 			state.navigation_view.set_neq(value.clone());
-		})
-	}
-
-	pub(super) fn set_channel_view_on_click(
-		state: &Rc<ClientScreenState>,
-		new_channel: &Rc<PublicChannel>,
-	) -> impl FnMut(Click) {
-		clone!(state, new_channel => move |_: Click| {
-			state.client_view.set_if(
-				ClientView::PublicChannel(new_channel.view_state().clone()),
-				|old, new| match (old, new) {
-					(ClientView::PublicChannel(ref old), ClientView::PublicChannel(ref new))
-						if Rc::ptr_eq(&old.channel(), &new.channel()) => false,
-
-					_ => true,
-				},
-			);
 		})
 	}
 
@@ -477,123 +427,18 @@ mod interactions {
 }
 
 mod menus {
+	pub use crate::views::sidebars::navigation::channels_list::channels_list;
+
 	use super::interactions;
 	use crate::App;
-    use crate::state::{PublicChannel, Conversation};
+    use crate::state::Conversation;
 	use crate::styles::{classname, icon};
-    use crate::views::client::{ClientScreenState, ClientView, channel};
+    use crate::views::client::{ClientScreenState, ClientView};
     use dominator::{Dom, EventOptions, clone, html};
-	use futures_signals::map_ref;
 	use futures_signals::signal::{Signal, SignalExt, always};
 	use futures_signals::signal_vec::SignalVecExt;
-    use std::pin::Pin;
     use std::rc::Rc;
     use std::sync::Arc;
-
-	pub fn channels_list(_app: Arc<App>, state: Rc<ClientScreenState>) -> Dom {
-		html!("div", {
-			.class(&*super::NAVIGATION_CONTAINER)
-			.child(view_console_entry(&state))
-
-			.children_signal_vec(state.channels_signal_vec().map(clone!(state => move |channel| {
-				channel_list_item(&state, &channel, map_ref! {
-					let name = channel.name.signal_cloned(),
-					let count = channel.characters.signal_vec_cloned().len() =>
-						format!("{} ({} characters)", name, count)
-				})
-			})))
-		})
-	}
-
-	fn channel_list_item<Title>(
-		state: &Rc<ClientScreenState>,
-		channel: &Rc<PublicChannel>,
-		title: Title,
-	) -> Dom
-	where Title: 'static + Signal<Item = String>, {
-		fn is_match<View>(view: View, iter_channel: Rc<PublicChannel>) -> impl Signal<Item = bool>
-		where View: Signal<Item = ClientView>, {
-			view.map(move |view| {
-				match view {
-					ClientView::PublicChannel(view_state) => Rc::ptr_eq(&view_state.channel(), &iter_channel),
-					_ => false,
-				}
-			})
-		}
-
-		html!("div", {
-			.attr("aria-role", "button")
-			.attr_signal("title", title)
-			.class(&*super::VIEW_SWITCH_BUTTON)
-			
-			.class_signal(
-				&*super::VIEW_SWITCH_BUTTON_ACTIVE,
-				is_match(state.client_view.signal_cloned(), channel.clone())
-			)
-
-			.child(html!("div", {
-				.attr("aria-hidden", "true")
-				.class(&*super::VIEW_SWITCH_BUTTON_ICON)
-				.text("#")
-			}))
-
-			.child(html!("div", {
-				.attr("aria-hidden", "true")
-				.class(&*super::VIEW_SWITCH_BUTTON_TEXT_CONTAINER)
-
-				.child(html!("span", {
-					.class(&*super::VIEW_SWITCH_BUTTON_TEXT)
-					.text_signal(channel.name.signal_cloned())
-				}))
-
-				.child(html!("span", {
-					.class(&*super::VIEW_SWITCH_BUTTON_SUBTEXT)
-					.text("Characters: ")
-					.text_signal(channel.characters.signal_vec_cloned().len().map(|len| len.to_string()))
-				}))
-			}))
-
-			.child(html!("div", {
-				.class(&*super::VIEW_SWITCH_BUTTON_OPTIONS_BOX)
-
-				.child(html!("span", {
-					.attr_signal("title", channel.name.signal_ref(|name|
-						format!("Close {0}", name)
-					))
-
-					.class(&*super::VIEW_SWITCH_BUTTON_OPTION)
-					.class(&*classname::ICON)
-					.event(interactions::close_channel_on_click(state, channel))
-					.text(&*icon::CLOSE_GLYPH)
-				}))
-
-				.child(html!("span", {
-					.attr_signal("title", map_ref! {
-						let is_pinned = channel.pinned.signal(),
-						let name = channel.name.signal_cloned() => {
-							let action = if *is_pinned { "Unpin" } else { "Pin" };
-
-							format!("{action} {0}", name, action = action)
-						}
-					})
-
-					.class_signal(&*super::VIEW_SWITCH_BUTTON_ACTIVE, channel.pinned.signal())
-					.class(&*super::VIEW_SWITCH_BUTTON_OPTION)
-					.class(&*classname::ICON)
-
-					.text_signal(channel.pinned.signal_ref(|pinned| match pinned {
-						true => &*icon::PINNED_GLYPH,
-						false => &*icon::PIN_GLYPH,
-					}))
-				}))
-			}))
-
-			.event_with_options(
-				&EventOptions::bubbles(),
-				interactions::set_channel_view_on_click(state, channel)
-			)
-		})
-	}
 
 	pub fn private_conversations_list(app: Arc<App>, state: Rc<ClientScreenState>) -> Dom {
 		html!("div", {
@@ -617,7 +462,7 @@ mod menus {
 		})
 	}
 
-	fn view_console_entry(state: &Rc<ClientScreenState>) -> Dom {
+	pub(super) fn view_console_entry(state: &Rc<ClientScreenState>) -> Dom {
 		fn is_match<View>(view: View) -> impl Signal<Item = bool>
 		where View: Signal<Item = ClientView>, {
 			view.map(|view| matches!(view, ClientView::Console))
