@@ -348,7 +348,7 @@ fn merge_update_at() {
 		}
 	);
 
-	assert_signal_vec_eq(merged, vec![
+	let output = assert_signal_vec_eq(merged, vec![
 		Poll::Ready(Some(VecDiff::Replace {
 			values: messages.iter().map(to_left).collect(),
 		})),
@@ -375,6 +375,23 @@ fn merge_update_at() {
 		Poll::Ready(Some(VecDiff::UpdateAt { index: 3, value: to_left(&new_messages[0]) })),
 		Poll::Ready(Some(VecDiff::UpdateAt { index: 4, value: to_left(&new_messages[1]) })),
 		Poll::Ready(None),
+	]);
+
+	assert_eq!(output, vec![
+		to_left(&messages[0]),
+		to_right(&notifications[0]),
+		to_left(&messages[1]),
+		to_left(&new_messages[0]),
+		to_left(&new_messages[1]),
+		to_right(&notifications[1]),
+		to_right(&notifications[2]),
+		to_right(&notifications[3]),
+		to_left(&messages[4]),
+		to_right(&notifications[4]),
+		to_left(&messages[5]),
+		to_left(&messages[6]),
+		to_left(&messages[7]),
+		to_right(&notifications[5]),
 	]);
 }
 
