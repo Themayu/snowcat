@@ -12,5 +12,10 @@
 			"iconColour": "#ff4444",
 			"type": "whole-line"
 		}
-	}
+	},
+	"lldb.dereferencePointers": true,
+	"lldb.consoleMode": "evaluate",
+	"rust-analyzer.debug.engine": "vadimcn.vscode-lldb",
+	"lldb.showDisassembly": "never",
+	"lldb.displayFormat": "auto"
 }
