@@ -6,6 +6,7 @@ use std::pin::Pin;
 use std::task::{Context, Poll};
 use pin_project::pin_project;
 
+#[must_use = "GroupByKey does nothing unless polled"]
 #[pin_project(project = GroupByKeyProj)]
 #[derive(Debug)]
 pub struct GroupByKey<Key, KeyFn, Source>
