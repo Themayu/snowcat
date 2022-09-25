@@ -248,6 +248,9 @@ pub mod images {
 	
 	/// Character gallery image URL base.
 	pub const CHARIMAGE: &str = const_concat!(IMAGES_BASE, "/charimage");
+
+	/// Character inline image URL base.
+	pub const CHARINLINE: &str = const_concat!(IMAGES_BASE, "/charinline");
 	
 	/// Character gallery thumbnail URL base.
 	pub const CHARTHUMB: &str = const_concat!(IMAGES_BASE, "/charthumb");
