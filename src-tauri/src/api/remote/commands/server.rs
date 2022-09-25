@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use crate::api::remote::characters;
 use crate::api::remote::commands::server::helpers::command_prefix;
 use serde::Deserialize;
