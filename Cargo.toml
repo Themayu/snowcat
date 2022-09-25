@@ -25,21 +25,21 @@ members = [
 [dependencies]
 anyhow = "1.0"
 chrono = "0.4"
-console_error_panic_hook = "0.1.6"
-discard = "1.0.3"
-dominator = "0.5.17"
+console_error_panic_hook = "0.1"
+discard = "1.0"
+dominator = "0.5"
 futures = "0.3"
 futures-signals = "0.3"
-js-sys = "0.3.55"
-lazy_static = "1.4.0"
-levenshtein-diff = "0.2.3"
-log = "0.4.14"
-once_cell = "1.7.2"
-pin-project = "1.0.8"
+js-sys = "0.3"
+lazy_static = "1.4"
+levenshtein-diff = "0.2"
+log = "0.4"
+once_cell = "1.7"
+pin-project = "1.0"
 serde_json = "1.0"
 thiserror = "1.0"
-wasm-bindgen-futures = "0.4.28"
-wasm-logger = "0.2.0"
+wasm-bindgen-futures = "0.4"
+wasm-logger = "0.2"
 
 [dependencies.snowcat_common]
 path = "./src-common"
@@ -52,11 +52,11 @@ version = "1.0"
 features = ["derive", "rc"]
 
 [dependencies.wasm-bindgen]
-version = "0.2.74"
+version = "0.2"
 features = ["serde-serialize"]
 
 [dependencies.web-sys]
-version = "0.3.56"
+version = "0.3"
 features = [
   "Document",
   "DomRect",
