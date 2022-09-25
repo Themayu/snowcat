@@ -103,6 +103,12 @@ pub fn discriminate(input: TokenStream) -> TokenStream {
 				#discriminant_display_impl
 			}
 		}
+
+		impl ::std::convert::From<#type_ident> for #discriminant_ident {
+			fn from(source: #type_ident) -> Self {
+				source.discriminant()
+			}
+		}
 	};
 
 	let assembled = quote! {
