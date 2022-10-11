@@ -4,7 +4,7 @@ description = "The front-end GUI for Snowcat, written in Rust using the Dominato
 authors = ["Dragon Wolf"]
 license = "MIT OR Apache-2.0"
 version = "0.1.0"
-edition = "2018"
+edition = "2021"
 repository = "https://github.com/Themayu/snowcat"
 readme = "README.md"
 
@@ -41,8 +41,8 @@ thiserror = "1.0"
 wasm-bindgen-futures = "0.4"
 wasm-logger = "0.2"
 
-[dependencies.snowcat_common]
-path = "./src-common"
+# [dependencies.snowcat_common]
+# path = "./src-common"
 
 [dependencies.snowcat_signals]
 path = "./src-signals"
