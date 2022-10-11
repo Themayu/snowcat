@@ -41,19 +41,18 @@ where
 	/// # Example
 	/// ```rust
 	/// # use futures::executor::block_on;
-	/// use snowcat_common::state::Cache;
+	/// use snowcat::state::Cache;
 	/// 
 	/// # block_on(async {
 	/// let cache = Cache::new(30, || async {
 	/// 	Ok::<_, ()>(String::from("Hello world!"))
 	/// });
 	/// 
-	/// let value = cache.read().await;
-	/// println!("{value:?}"); // Ok("Hello world!")
+	/// let actual = cache.read(|value| value.clone()).await;
+	/// println!("{actual:?}"); // Ok("Hello world!")
 	/// 
-	/// # let expected = String::from("Hello world!");
-	/// # let actual = value.cloned();
-	/// # assert_eq!(actual, Ok(expected));
+	/// let expected = String::from("Hello world!");
+	/// assert_eq!(actual, Ok(expected));
 	/// # });
 	/// ```
 	pub fn new(lifetime: i64, source: ItemSource) -> Self {
@@ -95,8 +94,15 @@ where
 
 	/// Read the current value in the cache slot, automatically invalidating and
 	/// re-acquiring it if necessary.
-	#[instrument(skip(self))]
-	pub async fn read<'value>(&'value self) -> Result<&'value Item, Err> {
+	#[instrument(skip(
+		self,
+		f,
+	))]
+	pub async fn read<'value, F, T>(&'value self, f: F) -> Result<T, Err>
+	where
+		T: 'static,
+		F: Fn(&'value Item) -> T,
+	{
 		// if compiled under nightly, this will await both futures at once.
 		let (mut value, mut source) = self.acquire_locks().await;
 
@@ -111,13 +117,20 @@ where
 		// If initialisation fails, `acquire_value` exits out before it updates
 		// `expires_at`. Also, this function exits out before it reaches this
 		// point.
-		Ok(unsafe { &*value.as_ptr() })
+		Ok(f(unsafe { &*value.as_ptr() }))
 	}
 
 	/// Read the current value in the cache slot mutably, automatically
 	/// invalidating and re-acquiring it if necessary.
-	#[instrument(skip(self))]
-	pub async fn read_mut<'value>(&'value mut self) -> Result<&'value mut Item, Err> {
+	#[instrument(skip(
+		self,
+		f,
+	))]
+	pub async fn read_mut<'value, F, T>(&'value mut self, mut f: F) -> Result<T, Err>
+	where
+		T: 'static,
+		F: FnMut(&'value mut Item) -> T,
+	{
 		// if compiled under nightly, this will await both futures at once.
 		let (mut value, mut source) = self.acquire_locks().await;
 
@@ -136,7 +149,7 @@ where
 		// Acquiring a mutable pointer from `self.value` requires being able to
 		// borrow `self` mutably, which will fail if another mutable reference
 		// exists.
-		Ok(unsafe { &mut *value.as_mut_ptr() })
+		Ok(f(unsafe { &mut *value.as_mut_ptr() }))
 	}
 
 	#[cfg(feat_future_join)]
@@ -408,8 +421,8 @@ where
 mod test {
 	use super::Cache;
 	use async_mutex::Mutex;
-	use futures_test::test;
 	use std::sync::atomic::{AtomicU8, Ordering};
+	use tokio::test;
 
 	#[test]
 	async fn cache_updates_successfully() {
@@ -420,15 +433,15 @@ mod test {
 
 			println!("counter = {counter}");
 
-			Ok::<_, ()>(format!("retrieved {counter} times"))
+			Ok::<_, ()>(*counter)
 		});
 
-		let actual = cache.read().await.cloned();
+		let actual = cache.read(|&counter| format!("retrieved {counter} times")).await;
 		assert_eq!(actual.as_deref(), Ok("retrieved 1 times"));
 
 		cache.invalidate_now().await;
 
-		let actual = cache.read().await.cloned();
+		let actual = cache.read(|&counter| format!("retrieved {counter} times")).await;
 		assert_eq!(actual.as_deref(), Ok("retrieved 2 times"));
 	}
 
@@ -449,11 +462,11 @@ mod test {
 			Ok::<ShouldDrop, ()>(ShouldDrop)
 		});
 
-		let _ = cache.read().await;
+		let _ = cache.read(|_| {}).await;
 		cache.invalidate_now().await;
-		let _ = cache.read().await;
+		let _ = cache.read(|_| {}).await;
 		cache.invalidate_now().await;
-		let _ = cache.read().await;
+		let _ = cache.read(|_| {}).await;
 
 		assert_eq!(DROPS.load(Ordering::SeqCst), 2);
 	}
