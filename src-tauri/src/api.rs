@@ -3,16 +3,15 @@ pub mod url_helpers;
 
 mod remote;
 
+use crate::api::characters::CharacterId;
 use crate::api::error::Result as ApiResult;
 use crate::api::remote::data::ticket::GetApiTicket;
 use crate::util::hex::{Hex, HexFromStrError};
 use reqwest::Client as HttpClient;
 use serde::Serialize;
-use snowcat_common::characters::CharacterId;
 use tauri::async_runtime::Mutex;
 use std::collections::HashMap;
-use std::fmt;
-use std::str;
+use std::{fmt, str};
 use thiserror::Error;
 use time::{Duration, OffsetDateTime};
 
@@ -123,6 +122,15 @@ impl fmt::Debug for Account {
 }
 
 #[derive(Debug)]
+pub struct AccountInfo {
+	pub default_character: CharacterId,
+
+	pub bookmarks_list: BookmarksList,
+	pub characters_list: CharactersList,
+	pub friends_list: FriendsList,
+}
+
+#[derive(Debug)]
 pub struct ApiClient {
 	account: Mutex<Account>,
 	http: HttpClient,
@@ -134,7 +142,7 @@ impl ApiClient {
 		http: HttpClient,
 		username: &str,
 		password: &str,
-	) -> ApiResult<(ApiClient, CharactersInfo)> {
+	) -> ApiResult<(ApiClient, AccountInfo)> {
 		let mut bookmarks_list = None;
 		let mut characters_list = None;
 		let mut friends_list = None;
@@ -163,14 +171,14 @@ impl ApiClient {
 			http,
 		};
 
-		let character_info = CharactersInfo {
+		let account_info = AccountInfo {
 			default_character,
 			bookmarks_list,
 			characters_list,
 			friends_list
 		};
 
-		Ok((client, character_info))
+		Ok((client, account_info))
 	}
 
 	/// Mark the current API ticket as invalid.
@@ -186,14 +194,6 @@ impl ApiClient {
 	pub(self) fn http(&self) -> HttpClient {
 		self.http.clone()
 	}
-}
-
-pub struct CharactersInfo {
-	pub default_character: CharacterId,
-
-	pub bookmarks_list: BookmarksList,
-	pub characters_list: CharactersList,
-	pub friends_list: FriendsList,
 }
 
 #[derive(Clone, Copy)]
