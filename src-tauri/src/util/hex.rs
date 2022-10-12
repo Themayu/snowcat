@@ -106,10 +106,26 @@ impl<const N: usize> Default for Hex<N> {
 
 impl<const N: usize> fmt::Display for Hex<N> {
 	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-		write!(f, "0x")?;
+		if f.alternate() {
+			write!(f, "0x")?;
+		}
+
+		if let Some(target_width) = f.width() {
+			let output_width = self.0.len() * 2;
+
+			if let Some(padding) = target_width.checked_sub(output_width) {
+				// round to next multiple of 2
+				let padding = match padding % 2 {
+					0 => padding,
+					_ => padding + 1,
+				};
+
+				write!(f, "{}", str::repeat("0", padding))?;
+			}
+		}
 
 		for c in self.0 {
-			write!(f, "{c}")?
+			write!(f, "{c}")?;
 		}
 
 		Ok(())
