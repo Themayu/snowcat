@@ -11,14 +11,6 @@ pub mod server;
 // #[derive(Debug, Deserialize, Serialize)]
 // pub struct ChannelName(String);
 
-#[derive(Debug, Deserialize, Serialize)]
-#[serde(rename_all = "lowercase")]
-pub enum ChannelMode {
-	Chat,
-	Ads,
-	Both,
-}
-
 #[derive(Debug, Default, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum CharacterTypingStatus {

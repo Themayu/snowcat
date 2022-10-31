@@ -56,6 +56,7 @@
         "minimize": true,
         "unmaximize": true,
         
+        "setDecorations": true,
         "setTitle": true,
         "startDragging": true
       }

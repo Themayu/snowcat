@@ -1,10 +1,10 @@
-use crate::api::{Account, ApiClient};
+use crate::api::{AccountCredentials, ApiClient};
+use crate::api::characters::CharacterId;
 use crate::api::error::{DeserializeError, Result as ApiResult};
 use crate::api::remote::data::mock;
 use reqwest::Client as HttpClient;
 use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, DefaultOnNull, DisplayFromStr};
-use snowcat_common::characters::CharacterId;
 use std::collections::BTreeMap;
 use std::fmt;
 use time::{OffsetDateTime, UtcOffset};
@@ -15,7 +15,7 @@ use time::{OffsetDateTime, UtcOffset};
 
 impl ApiClient {
 	pub async fn get_character(&self, character: &str) -> ApiResult<GetChararacterResponse> {
-		let mut account = self.account.lock().await;
+		let mut account = self.account.credentials().await;
 		let account = &mut *account;
 
 		account.refresh_if_needed(self.http()).await?;
@@ -26,7 +26,7 @@ impl ApiClient {
 	}
 
 	pub async fn list_characters(&self) -> ApiResult<Vec<String>> {
-		let mut account = self.account.lock().await;
+		let mut account = self.account.credentials().await;
 		let account = &mut *account;
 
 		account.refresh_if_needed(self.http()).await?;
@@ -47,7 +47,7 @@ pub struct GetChararacter<'client, 'command, const A: bool> {
 	name: &'command str,
 
 	#[serde(flatten)]
-	account: Option<&'client Account>
+	account: Option<&'client AccountCredentials>
 }
 
 impl<'client, 'command> GetChararacter<'client, 'command, false> {
@@ -58,7 +58,7 @@ impl<'client, 'command> GetChararacter<'client, 'command, false> {
 		}
 	}
 
-	pub fn use_account(self, account: &'client Account) -> GetChararacter<'client, 'command, true> {
+	pub fn use_account(self, account: &'client AccountCredentials) -> GetChararacter<'client, 'command, true> {
 		GetChararacter {
 			name: self.name,
 			account: Some(account),
@@ -75,7 +75,7 @@ impl GetChararacter<'_, '_, true> {
 #[derive(Debug, Clone, Serialize)]
 pub struct ListCharacters<'client, const A: bool> {
 	#[serde(flatten)]
-	account: Option<&'client Account>,
+	account: Option<&'client AccountCredentials>,
 }
 
 impl ListCharacters<'_, false> {
@@ -85,7 +85,7 @@ impl ListCharacters<'_, false> {
 		}
 	}
 
-	pub fn use_account<'client>(self, account: &'client Account) -> ListCharacters<'client, true> {
+	pub fn use_account<'client>(self, account: &'client AccountCredentials) -> ListCharacters<'client, true> {
 		ListCharacters {
 			account: Some(account),
 		}

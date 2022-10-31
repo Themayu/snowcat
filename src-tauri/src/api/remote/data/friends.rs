@@ -1,4 +1,4 @@
-use crate::api::{Account, ApiClient};
+use crate::api::{AccountCredentials, ApiClient};
 use crate::api::error::{DeserializeError, Result as ApiResult};
 use crate::api::remote::data::mock;
 use reqwest::Client as HttpClient;
@@ -12,7 +12,7 @@ use time::{Duration, OffsetDateTime};
 
 impl ApiClient {
 	pub async fn list_friends(&self) -> ApiResult<Vec<FriendBinding>> {
-		let mut account = self.account.lock().await;
+		let mut account = self.account.credentials().await;
 		let account = &mut *account;
 
 		account.refresh_if_needed(self.http()).await?;
@@ -24,7 +24,7 @@ impl ApiClient {
 	}
 
 	pub async fn remove_friend(&self, friend: &str) -> ApiResult<()> {
-		let mut account = self.account.lock().await;
+		let mut account = self.account.credentials().await;
 		let account = &mut *account;
 
 		account.refresh_if_needed(self.http()).await?;
@@ -35,7 +35,7 @@ impl ApiClient {
 	}
 
 	pub async fn accept_friend_request(&self, request_id: u64) -> ApiResult<()> {
-		let mut account = self.account.lock().await;
+		let mut account = self.account.credentials().await;
 		let account = &mut *account;
 
 		account.refresh_if_needed(self.http()).await?;
@@ -46,7 +46,7 @@ impl ApiClient {
 	}
 
 	pub async fn cancel_friend_request(&self, request_id: u64) -> ApiResult<()> {
-		let mut account = self.account.lock().await;
+		let mut account = self.account.credentials().await;
 		let account = &mut *account;
 
 		account.refresh_if_needed(self.http()).await?;
@@ -57,7 +57,7 @@ impl ApiClient {
 	}
 
 	pub async fn deny_friend_request(&self, request_id: u64) -> ApiResult<()> {
-		let mut account = self.account.lock().await;
+		let mut account = self.account.credentials().await;
 		let account = &mut *account;
 
 		account.refresh_if_needed(self.http()).await?;
@@ -68,7 +68,7 @@ impl ApiClient {
 	}
 
 	pub async fn list_friend_requests(&self, list: ListType) -> ApiResult<Vec<FriendRequest>> {
-		let mut account = self.account.lock().await;
+		let mut account = self.account.credentials().await;
 		let account = &mut *account;
 
 		account.refresh_if_needed(self.http()).await?;
@@ -91,7 +91,7 @@ impl ApiClient {
 	}
 
 	pub async fn send_friend_request<'command>(&self, source: &'command str, target: &'command str) -> ApiResult<()> {
-		let mut account = self.account.lock().await;
+		let mut account = self.account.credentials.lock().await;
 		let account = &mut *account;
 
 		account.refresh_if_needed(self.http()).await?;
@@ -111,7 +111,7 @@ impl ApiClient {
 #[derive(Debug, Clone, Serialize)]
 pub struct ListFriends<'client, const A: bool> {
 	#[serde(flatten)]
-	account: Option<&'client Account>,
+	account: Option<&'client AccountCredentials>,
 }
 
 impl ListFriends<'_, false> {
@@ -121,7 +121,7 @@ impl ListFriends<'_, false> {
 		}
 	}
 
-	pub fn use_account<'client>(self, account: &'client Account) -> ListFriends<'client, true> {
+	pub fn use_account<'client>(self, account: &'client AccountCredentials) -> ListFriends<'client, true> {
 		ListFriends {
 			account: Some(account),
 		}
@@ -139,7 +139,7 @@ pub struct RemoveFriend<'client, 'command, const A: bool> {
 	friend: &'command str,
 	
 	#[serde(flatten)]
-	account: Option<&'client Account>,
+	account: Option<&'client AccountCredentials>,
 }
 
 impl<'client, 'command> RemoveFriend<'client, 'command, false> {
@@ -150,7 +150,7 @@ impl<'client, 'command> RemoveFriend<'client, 'command, false> {
 		}
 	}
 
-	pub fn use_account(self, account: &'client Account) -> RemoveFriend<'client, 'command, true> {
+	pub fn use_account(self, account: &'client AccountCredentials) -> RemoveFriend<'client, 'command, true> {
 		RemoveFriend {
 			friend: self.friend,
 			account: Some(account),
@@ -169,7 +169,7 @@ pub struct AcceptFriendRequest<'client, const A: bool> {
 	request_id: u64,
 
 	#[serde(flatten)]
-	account: Option<&'client Account>,
+	account: Option<&'client AccountCredentials>,
 }
 
 impl AcceptFriendRequest<'_, false> {
@@ -180,7 +180,7 @@ impl AcceptFriendRequest<'_, false> {
 		}
 	}
 
-	pub fn use_account<'client>(self, account: &'client Account) -> AcceptFriendRequest<'client, true> {
+	pub fn use_account<'client>(self, account: &'client AccountCredentials) -> AcceptFriendRequest<'client, true> {
 		AcceptFriendRequest {
 			request_id: self.request_id,
 			account: Some(account),
@@ -199,7 +199,7 @@ pub struct CancelFriendRequest<'client, const A: bool> {
 	request_id: u64,
 
 	#[serde(flatten)]
-	account: Option<&'client Account>,
+	account: Option<&'client AccountCredentials>,
 }
 
 impl CancelFriendRequest<'_, false> {
@@ -210,7 +210,7 @@ impl CancelFriendRequest<'_, false> {
 		}
 	}
 
-	pub fn use_account<'client>(self, account: &'client Account) -> CancelFriendRequest<'client, true> {
+	pub fn use_account<'client>(self, account: &'client AccountCredentials) -> CancelFriendRequest<'client, true> {
 		CancelFriendRequest {
 			request_id: self.request_id,
 			account: Some(account),
@@ -229,7 +229,7 @@ pub struct DenyFriendRequest<'client, const A: bool> {
 	request_id: u64,
 
 	#[serde(flatten)]
-	account: Option<&'client Account>,
+	account: Option<&'client AccountCredentials>,
 }
 
 impl DenyFriendRequest<'_, false> {
@@ -240,7 +240,7 @@ impl DenyFriendRequest<'_, false> {
 		}
 	}
 
-	pub fn use_account<'client>(self, account: &'client Account) -> DenyFriendRequest<'client, true> {
+	pub fn use_account<'client>(self, account: &'client AccountCredentials) -> DenyFriendRequest<'client, true> {
 		DenyFriendRequest {
 			request_id: self.request_id,
 			account: Some(account),
@@ -257,7 +257,7 @@ impl DenyFriendRequest<'_, true> {
 #[derive(Debug, Clone, Serialize)]
 pub struct ListIncomingFriendRequests<'client, const A: bool> {
 	#[serde(flatten)]
-	account: Option<&'client Account>,
+	account: Option<&'client AccountCredentials>,
 }
 
 impl ListIncomingFriendRequests<'_, false> {
@@ -267,7 +267,7 @@ impl ListIncomingFriendRequests<'_, false> {
 		}
 	}
 
-	pub fn use_account<'client>(self, account: &'client Account) -> ListIncomingFriendRequests<'client, true> {
+	pub fn use_account<'client>(self, account: &'client AccountCredentials) -> ListIncomingFriendRequests<'client, true> {
 		ListIncomingFriendRequests { 
 			account: Some(account),
 		}
@@ -283,7 +283,7 @@ impl ListIncomingFriendRequests<'_, true> {
 #[derive(Debug, Clone, Serialize)]
 pub struct ListOutgoingFriendRequests<'client, const A: bool> {
 	#[serde(flatten)]
-	account: Option<&'client Account>,
+	account: Option<&'client AccountCredentials>,
 }
 
 impl ListOutgoingFriendRequests<'_, false> {
@@ -293,7 +293,7 @@ impl ListOutgoingFriendRequests<'_, false> {
 		}
 	}
 
-	pub fn use_account<'client>(self, account: &'client Account) -> ListOutgoingFriendRequests<'client, true> {
+	pub fn use_account<'client>(self, account: &'client AccountCredentials) -> ListOutgoingFriendRequests<'client, true> {
 		ListOutgoingFriendRequests { 
 			account: Some(account),
 		}
@@ -315,7 +315,7 @@ pub struct SendFriendRequest<'client, 'command, const S: bool, const T: bool, co
 	target: Option<&'command str>,
 	
 	#[serde(flatten)]
-	account: Option<&'client Account>,
+	account: Option<&'client AccountCredentials>,
 }
 
 impl SendFriendRequest<'_, '_, false, false, false> {
@@ -349,7 +349,7 @@ impl<'client, 'command, const S: bool, const A: bool> SendFriendRequest<'client,
 }
 
 impl<'command, const S: bool, const T: bool> SendFriendRequest<'_, 'command, S, T, false> {
-	pub fn use_account<'client>(self, account: &'client Account) -> SendFriendRequest<'client, 'command, S, T, true> {
+	pub fn use_account<'client>(self, account: &'client AccountCredentials) -> SendFriendRequest<'client, 'command, S, T, true> {
 		SendFriendRequest {
 			source: self.source,
 			target: self.target,

@@ -6,12 +6,12 @@ pub mod ticket;
 
 mod mock;
 
-use crate::api::Account;
+use crate::api::AccountCredentials;
 use serde::ser::SerializeStruct;
 
 /// Serialize an account object into a struct serializer, then end the
 /// serializer.
-fn serialize_account<S>(mut serializer: S, account: &Account) -> Result<S::Ok, S::Error>
+fn serialize_account<S>(mut serializer: S, account: &AccountCredentials) -> Result<S::Ok, S::Error>
 where
 	S: SerializeStruct,
 {

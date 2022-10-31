@@ -1,4 +1,4 @@
-use crate::api::{Account, ApiClient};
+use crate::api::{AccountCredentials, ApiClient};
 use crate::api::error::{DeserializeError, Result as ApiResult};
 use crate::api::remote::data::mock;
 use reqwest::Client as HttpClient;
@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 
 impl ApiClient {
 	pub async fn add_bookmark(&self, character: &str) -> ApiResult<()> {
-		let mut account = self.account.lock().await;
+		let mut account = self.account.credentials().await;
 		let account = &mut *account;
 
 		account.refresh_if_needed(self.http()).await?;
@@ -21,7 +21,7 @@ impl ApiClient {
 	}
 
 	pub async fn list_bookmarks(&self) -> ApiResult<Vec<String>> {
-		let mut account = self.account.lock().await;
+		let mut account = self.account.credentials().await;
 		let account = &mut *account;
 
 		account.refresh_if_needed(self.http()).await?;
@@ -33,7 +33,7 @@ impl ApiClient {
 	}
 
 	pub async fn remove_bookmark(&self, character: &str) -> ApiResult<()> {
-		let mut account = self.account.lock().await;
+		let mut account = self.account.credentials().await;
 		let account = &mut *account;
 
 		account.refresh_if_needed(self.http()).await?;
@@ -53,7 +53,7 @@ pub struct AddBookmark<'client, 'command, const A: bool> {
 	name: &'command str,
 
 	#[serde(flatten)]
-	account: Option<&'client Account>,
+	account: Option<&'client AccountCredentials>,
 }
 
 impl<'client, 'command> AddBookmark<'client, 'command, false> {
@@ -64,7 +64,7 @@ impl<'client, 'command> AddBookmark<'client, 'command, false> {
 		}
 	}
 
-	pub fn use_account(self, account: &'client Account) -> AddBookmark<'client, 'command, true> {
+	pub fn use_account(self, account: &'client AccountCredentials) -> AddBookmark<'client, 'command, true> {
 		AddBookmark {
 			name: self.name,
 			account: Some(account),
@@ -81,7 +81,7 @@ impl AddBookmark<'_, '_, true> {
 #[derive(Debug, Clone, Serialize)]
 pub struct ListBookmarks<'client, const A: bool> {
 	#[serde(flatten)]
-	account: Option<&'client Account>,
+	account: Option<&'client AccountCredentials>,
 }
 
 impl ListBookmarks<'_, false> {
@@ -91,7 +91,7 @@ impl ListBookmarks<'_, false> {
 		}
 	}
 
-	pub fn use_account<'client>(self, account: &'client Account) -> ListBookmarks<'client, true> {
+	pub fn use_account<'client>(self, account: &'client AccountCredentials) -> ListBookmarks<'client, true> {
 		ListBookmarks {
 			account: Some(account),
 		}
@@ -109,7 +109,7 @@ pub struct RemoveBookmark<'client, 'command, const A: bool> {
 	name: &'command str,
 
 	#[serde(flatten)]
-	account: Option<&'client Account>,
+	account: Option<&'client AccountCredentials>,
 }
 
 impl<'client, 'command> RemoveBookmark<'client, 'command, false> {
@@ -120,7 +120,7 @@ impl<'client, 'command> RemoveBookmark<'client, 'command, false> {
 		}
 	}
 
-	pub fn use_account(self, account: &'client Account) -> RemoveBookmark<'client, 'command, true> {
+	pub fn use_account(self, account: &'client AccountCredentials) -> RemoveBookmark<'client, 'command, true> {
 		RemoveBookmark {
 			name: self.name,
 			account: Some(account),

@@ -3,6 +3,12 @@ use const_str::{
 	replace as const_replace,
 };
 
+pub const CLIENT_NAME: &str = const_format!(
+	"Snowcat/{version} by {authors}",
+	version = env!("CARGO_PKG_VERSION"),
+	authors = const_replace!(env!("CARGO_PKG_AUTHORS"), ":", ", "),
+);
+
 pub mod api {
 	use const_str::{
 		concat as const_concat,
@@ -234,7 +240,7 @@ pub mod character_info {
 
 pub mod headers {
 	pub const USER_AGENT: &str = "User-Agent";
-	pub const USER_AGENT_VALUE: &str = concat!("Snowcat/", env!("CARGO_PKG_VERSION"));
+	pub const USER_AGENT_VALUE: &str = super::CLIENT_NAME;
 }
 
 pub mod images {
@@ -258,9 +264,3 @@ pub mod images {
 	/// EIcon URL base.
 	pub const EICON: &str = const_concat!(IMAGES_BASE, "/eicon");
 }
-
-pub const CLIENT_NAME: &str = const_format!(
-	"Snowcat/{version} by {authors}",
-	version = env!("CARGO_PKG_VERSION"),
-	authors = const_replace!(env!("CARGO_PKG_AUTHORS"), ":", ", "),
-);

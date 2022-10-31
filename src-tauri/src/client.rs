@@ -1,26 +1,233 @@
-use thiserror::Error;
-
-use crate::api::ApiClient;
+use crate::api::{ApiClient, Account};
+use crate::api::error::Result as ApiResult;
+use crate::api::channels::{ChannelId, ChannelInfo};
 use crate::api::characters::{CharacterId, CharacterInfo};
+use crate::io::Connection;
+use crate::state::prelude::*;
+use reqwest::Client as HttpClient;
 use std::borrow::Borrow;
 use std::collections::BTreeMap;
 use std::ops::{Index, IndexMut};
+use thiserror::Error;
 
+pub type ChannelListResult<T> = Result<T, ChannelListError>;
 pub type CharacterListResult<T> = Result<T, CharacterListError>;
 
 pub struct Client {
-	api: Option<ApiClient>,
-	character_cache: CharacterList,
+	api_client: RwLock<Option<ApiClient>>,
+	connection: RwLock<Option<Connection>>,
+	http: HttpClient,
 }
 
-pub struct ChannelList(BTreeMap<String, /*ChannelInfo*/ ()>);
+impl Client {
+	pub fn new(http: HttpClient) -> Self {
+		Client {
+			api_client: RwLock::new(None),
+			connection: RwLock::new(None),
+			http,
+		}
+	}
+
+	pub async fn authenticate(&self, username: &str, password: &str) -> ApiResult<()> {
+		let Client { http, .. } = self;
+
+		*self.api_client_mut().await = Some(ApiClient::authenticate(http.clone(), username, password).await?);
+
+		Ok(())
+	}
+
+	pub async fn deauthenticate(&self) {
+		*self.api_client_mut().await = None;
+	}
+
+	pub async fn account_info(&self) -> RwLockReadGuard<'_, Account> {
+		RwLockReadGuard::map(self.api_client().await, |opt| opt.as_ref().map(|api| api.account()).unwrap())
+	}
+
+	async fn api_client(&self) -> RwLockReadGuard<'_, Option<ApiClient>> {
+		self.api_client.read().await
+	}
+
+	async fn api_client_mut(&self) -> RwLockWriteGuard<'_, Option<ApiClient>> {
+		self.api_client.write().await
+	}
+
+	async fn socket_client(&self) -> RwLockReadGuard<'_, Option<Connection>> {
+		self.connection.read().await
+	}
+
+	async fn socket_client_mut(&self) -> RwLockWriteGuard<'_, Option<Connection>> {
+		self.connection.write().await
+	}
+}
+
+pub struct ChannelList {
+	id_map: BTreeMap<ChannelId, ChannelInfo>,
+}
 
 impl ChannelList {
 	/// Create a new, empty channel cache with the global allocator.
 	///
 	/// Does not allocate anything on its own.
 	pub fn new() -> Self {
-		ChannelList(BTreeMap::new())
+		ChannelList {
+			id_map: BTreeMap::new(),
+		}
+	}
+
+	/// Insert a channel into the list, using its ID as the key.
+	/// 
+	/// Returns the channel ID to make future lookups easier.
+	/// 
+	/// # Example
+	/// ```rust
+	/// use snowcat::api::channels::{ChannelId, ChannelInfo};
+	/// use snowcat::client::ChannelList;
+	/// 
+	/// let mut list = ChannelList::new();
+	/// 
+	/// let channel_id = "ADH-{example}";
+	/// let channel_name = "Example Channel";
+	/// 
+	/// let channel = ChannelInfo {
+	/// 	id: channel_id.into(),
+	/// 	display_name: channel_name.to_owned(),
+	/// 	character_count: 14,
+	/// 
+	/// 	is_official: false,
+	/// };
+	/// 
+	/// let id = list.insert(channel.clone()).expect("channel should be inserted successfully");
+	/// 
+	/// assert_eq!(list.get(&id), Some(&channel));
+	/// assert_eq!(list.get(&"nonexistent".into()), None);
+	/// ```
+	pub fn insert(&mut self, channel_info: ChannelInfo) -> ChannelListResult<ChannelId> {
+		let channel_id = channel_info.id.clone();
+		if self.id_map.contains_key(&channel_id) {
+			return Err(ChannelListError::ChannelAlreadyPresent(channel_id));
+		}
+
+		self.id_map.insert(channel_id.clone(), channel_info);
+
+		Ok(channel_id)
+	}
+
+	/// Acquire a reference to a channel in the list.
+	/// 
+	/// # Example
+	/// ```rust
+	/// use snowcat::api::channels::{ChannelId, ChannelInfo};
+	/// use snowcat::client::ChannelList;
+	/// 
+	/// let mut list = ChannelList::new();
+	/// 
+	/// let channel_id = "ADH-{example}";
+	/// let channel_name = "Example Channel";
+	/// 
+	/// let channel = ChannelInfo {
+	/// 	id: channel_id.into(),
+	/// 	display_name: channel_name.to_owned(),
+	/// 	character_count: 14,
+	/// 
+	/// 	is_official: false,
+	/// };
+	/// 
+	/// let id = list.insert(channel.clone()).expect("channel should be inserted successfully");
+	/// 
+	/// assert_eq!(list.get(&id), Some(&channel));
+	/// assert_eq!(list.get(&"nonexistent".into()), None);
+	/// ```
+	pub fn get(&self, id: &ChannelId) -> Option<&ChannelInfo> {
+		self.id_map.get(id)
+	}
+
+	/// Acquire a mutable reference to a channel in the list.
+	/// 
+	/// # Example
+	/// ```rust
+	/// use snowcat::api::channels::{ChannelId, ChannelInfo};
+	/// use snowcat::client::ChannelList;
+	/// 
+	/// let mut list = ChannelList::new();
+	/// 
+	/// let channel_id = "ADH-{example}";
+	/// let channel_name = "Example Channel";
+	/// 
+	/// let channel = ChannelInfo {
+	/// 	id: channel_id.into(),
+	/// 	display_name: channel_name.to_owned(),
+	/// 	character_count: 14,
+	/// 
+	/// 	is_official: false,
+	/// };
+	/// 
+	/// let id = list.insert(channel.clone()).expect("channel should be inserted successfully");
+	/// 
+	/// assert_eq!(list.get(&id), Some(&channel));
+	/// assert_eq!(list.get(&id).map(|channel| &*channel.display_name), Some(channel_name));
+	/// 
+	/// let new_name = "Homepage";
+	/// if let Some(channel) = list.get_mut(&id) {
+	/// 	channel.display_name = new_name.to_owned();
+	/// }
+	/// 
+	/// assert_eq!(list.get(&id).map(|channel| &*channel.display_name), Some(new_name));
+	/// ```
+	pub fn get_mut(&mut self, id: &ChannelId) -> Option<&mut ChannelInfo> {
+		self.id_map.get_mut(id)
+	}
+
+	/// Remove a channel from the list, returning it to the caller.
+	/// 
+	/// # Example
+	/// ```rust
+	/// use snowcat::api::channels::{ChannelId, ChannelInfo};
+	/// use snowcat::client::ChannelList;
+	/// 
+	/// let mut list = ChannelList::new();
+	/// 
+	/// let channel_id = "ADH-{example}";
+	/// let channel_name = "Example Channel";
+	/// 
+	/// let channel = ChannelInfo {
+	/// 	id: channel_id.into(),
+	/// 	display_name: channel_name.to_owned(),
+	/// 	character_count: 14,
+	/// 
+	/// 	is_official: false,
+	/// };
+	/// 
+	/// let id = list.insert(channel.clone()).expect("channel should be inserted successfully");
+	/// let existing_channel = list.remove(&id).expect("channel should exist under the correct ID");
+	/// 
+	/// assert_eq!(list.get(&id), None);
+	/// assert_eq!(existing_channel, channel);
+	/// ```
+	pub fn remove(&mut self, id: &ChannelId) -> ChannelListResult<ChannelInfo> {
+		match self.id_map.remove(id) {
+			Some(channel_info) => Ok(channel_info),
+			None => Err(ChannelListError::ChannelNotFound(id.clone())),
+		}
+	}
+
+	/// Iterate over the list of channels.
+	pub fn iter(&self) -> impl Iterator<Item = &ChannelInfo> {
+		self.id_map.values()
+	}
+
+	/// Iterate over the list of channels, sorted by a key extraction function.
+	/// 
+	/// # Allocates
+	/// This function uses an intermediary allocation to sort the iterator.
+	pub fn iter_sorted<T, F>(&self, mut key_fn: F) -> impl Iterator<Item = &ChannelInfo>
+	where
+		T: Ord,
+		F: FnMut(&ChannelInfo) -> &T,
+	{
+		let mut vector = self.id_map.values().collect::<Vec<_>>();
+		vector.sort_by_key(|channel| key_fn(*channel));
+		vector.into_iter()
 	}
 }
 
@@ -28,6 +235,15 @@ impl Default for ChannelList {
 	fn default() -> Self {
 		ChannelList::new()
 	}
+}
+
+#[derive(Debug, Clone, Error)]
+pub enum ChannelListError {
+	#[error(r#"The channel "{0}" is already present in the list."#)]
+	ChannelAlreadyPresent(ChannelId),
+
+	#[error(r#"The channel "{0}" was not found in the list."#)]
+	ChannelNotFound(ChannelId),
 }
 
 pub struct CharacterList {
@@ -117,6 +333,69 @@ impl CharacterList {
 		} else {
 			Err(CharacterListError::IdAlreadyExists(id))
 		}
+	}
+
+	/// Returns `true` if the list contains a character with the given name.
+	/// 
+	/// # Example
+	/// ```
+	/// use snowcat::api::characters::{
+	/// 	CharacterGender,
+	/// 	CharacterId,
+	/// 	CharacterInfo,
+	/// 	CharacterStatus,
+	/// 	CharacterStatusKind,
+	/// };
+	/// use snowcat::client::CharacterList;
+	/// 
+	/// let mut list = CharacterList::new();
+	/// 
+	/// let character_name = "Sarah Blitz Garisson";
+	/// let character = CharacterInfo {
+	/// 	name: character_name.to_owned(),
+	/// 	gender: CharacterGender::Hermaphrodite,
+	/// 	status: CharacterStatus::new(CharacterStatusKind::Offline),
+	/// };
+	/// 
+	/// let character_id = 25565;
+	/// 
+	/// let _name = list.insert_with_id(character.clone(), CharacterId(character_id))
+	/// 	.expect("character should be inserted successfully");
+	/// 
+	/// assert_eq!(list.contains_id(&CharacterId(character_id)), true);
+	/// ```
+	pub fn contains_id(&self, id: &CharacterId) -> bool {
+		self.id_map.contains_key(id)
+	}
+
+	/// Returns `true` if the list contains a character with the given name.
+	/// 
+	/// # Example
+	/// ```
+	/// use snowcat::api::characters::{
+	/// 	CharacterGender,
+	/// 	CharacterId,
+	/// 	CharacterInfo,
+	/// 	CharacterStatus,
+	/// 	CharacterStatusKind,
+	/// };
+	/// use snowcat::client::CharacterList;
+	/// 
+	/// let mut list = CharacterList::new();
+	/// 
+	/// let character_name = "Sarah Blitz Garisson";
+	/// let character = CharacterInfo {
+	/// 	name: character_name.to_owned(),
+	/// 	gender: CharacterGender::Hermaphrodite,
+	/// 	status: CharacterStatus::new(CharacterStatusKind::Offline),
+	/// };
+	/// 
+	/// let name = list.insert(character.clone()).expect("character should be inserted successfully");
+	/// 
+	/// assert_eq!(list.contains_name(&name), true);
+	/// ```
+	pub fn contains_name(&self, name: &str) -> bool {
+		self.name_map.contains_key(name)
 	}
 
 	/// Insert a character into the list, using its name as the key.
@@ -271,6 +550,8 @@ impl CharacterList {
 	/// list.insert(character.clone()).expect("character should be inserted successfully");
 	/// list.associate_id(character_name, CharacterId(character_id)).expect("id association should be successful");
 	///
+	/// assert_eq!(list.get_by_id(&CharacterId(character_id)), Some(&character));
+	/// 
 	/// if let Some(character) = list.get_mut_by_id(&CharacterId(character_id)) {
 	/// 	character.status = CharacterStatus::new_with_message("just woke up...", CharacterStatusKind::DoNotDisturb);
 	/// }
@@ -341,6 +622,8 @@ impl CharacterList {
 	/// };
 	///
 	/// list.insert(character.clone()).expect("character should be inserted successfully");
+	///
+	/// assert_eq!(list.get_by_name(character_name), Some(&character));
 	///
 	/// if let Some(character) = list.get_mut_by_name(character_name) {
 	/// 	character.status = CharacterStatus::new_with_message("just woke up...", CharacterStatusKind::DoNotDisturb);
@@ -589,7 +872,9 @@ pub enum CharacterListError {
 
 	#[error("Did not find character ID {0} in the list.")]
 	IdNotFound(CharacterId),
-
-	#[error("Cannot acquire a mutable reference to character {0:?} without violating memory safety rules")]
-	CannotMutate(String),
 }
+
+fn _assert_client_traits()
+where
+	Client: Send + Sync + 'static,
+{ }

@@ -1,5 +1,5 @@
 use super::serialize_account;
-use crate::api::{Account, ApiClient};
+use crate::api::{AccountCredentials, ApiClient};
 use crate::api::error::{DeserializeError, Result as ApiResult};
 use crate::api::remote::data::mock;
 use reqwest::Client as HttpClient;
@@ -26,7 +26,7 @@ impl ApiClient {
 	}
 
 	pub async fn get_group_list(&self) -> ApiResult<Vec<String>> {
-		let mut account = self.account.lock().await;
+		let mut account = self.account.credentials().await;
 		let account = &mut *account;
 
 		account.refresh_if_needed(self.http()).await?;
@@ -38,7 +38,7 @@ impl ApiClient {
 	}
 
 	pub async fn get_ignore_list(&self) -> ApiResult<Vec<String>> {
-		let mut account = self.account.lock().await;
+		let mut account = self.account.credentials().await;
 		let account = &mut *account;
 
 		account.refresh_if_needed(self.http()).await?;
@@ -56,7 +56,7 @@ impl ApiClient {
 
 #[derive(Debug, Clone)]
 pub struct GetGroupList<'client, const A: bool> {
-	account: Option<&'client Account>,
+	account: Option<&'client AccountCredentials>,
 }
 
 impl GetGroupList<'_, false> {
@@ -66,7 +66,7 @@ impl GetGroupList<'_, false> {
 		}
 	}
 
-	pub fn use_account<'client>(self, account: &'client Account) -> GetGroupList<'client, true> {
+	pub fn use_account<'client>(self, account: &'client AccountCredentials) -> GetGroupList<'client, true> {
 		GetGroupList {
 			account: Some(account),
 		}
@@ -93,7 +93,7 @@ impl Serialize for GetGroupList<'_, true> {
 
 #[derive(Debug, Clone)]
 pub struct GetIgnoreList<'client, const A: bool> {
-	account: Option<&'client Account>,
+	account: Option<&'client AccountCredentials>,
 }
 
 impl GetIgnoreList<'_, false> {
@@ -103,7 +103,7 @@ impl GetIgnoreList<'_, false> {
 		}
 	}
 
-	pub fn use_account<'client>(self, account: &'client Account) -> GetIgnoreList<'client, true> {
+	pub fn use_account<'client>(self, account: &'client AccountCredentials) -> GetIgnoreList<'client, true> {
 		GetIgnoreList {
 			account: Some(account),
 		}

@@ -1,4 +1,5 @@
-use crate::api::remote::characters;
+use crate::api::channels;
+use crate::api::characters;
 use crate::api::remote::commands::server::helpers::command_prefix;
 use serde::Deserialize;
 use serde_json::Value;
@@ -15,9 +16,9 @@ use std::marker::PhantomData;
 #[derive(Debug, Deserialize)]
 pub struct ChannelChangeDescription<'data> {
 	#[serde(rename = "channel")]
-	channel_id: &'data str,
+	pub(in crate::api) channel_id: &'data str,
 
-	description: &'data str,
+	pub(in crate::api) description: &'data str,
 }
 
 command_prefix!(ChannelChangeDescription<'_>, "CDS");
@@ -25,9 +26,9 @@ command_prefix!(ChannelChangeDescription<'_>, "CDS");
 #[derive(Debug, Deserialize)]
 pub struct ChannelChangeMode<'data> {
 	#[serde(rename = "channel")]
-	channel_id: &'data str,
+	pub(in crate::api) channel_id: &'data str,
 
-	mode: super::ChannelMode,
+	pub(in crate::api) mode: channels::ChannelMode,
 }
 
 command_prefix!(ChannelChangeMode<'_>, "RMO");
@@ -35,9 +36,9 @@ command_prefix!(ChannelChangeMode<'_>, "RMO");
 #[derive(Debug, Deserialize)]
 pub struct ChannelChangeOwner<'data> {
 	#[serde(rename = "channel")]
-	channel_id: &'data str,
+	pub(in crate::api) channel_id: &'data str,
 
-	character: &'data str,
+	pub(in crate::api) character: &'data str,
 }
 
 command_prefix!(ChannelChangeOwner<'_>, "CSO");
@@ -45,12 +46,12 @@ command_prefix!(ChannelChangeOwner<'_>, "CSO");
 #[derive(Debug, Deserialize)]
 pub struct ChannelData<'data> {
 	#[serde(rename = "channel")]
-	channel_id: &'data str,
+	pub(in crate::api) channel_id: &'data str,
 
 	#[serde(borrow, rename = "users")]
-	characters: Vec<data::CharacterName<'data>>,
+	pub(in crate::api) characters: Vec<data::CharacterName<'data>>,
 
-	mode: super::ChannelMode,
+	pub(in crate::api) mode: channels::ChannelMode,
 }
 
 command_prefix!(ChannelData<'_>, "ICH");
@@ -58,22 +59,22 @@ command_prefix!(ChannelData<'_>, "ICH");
 #[derive(Debug, Deserialize)]
 pub struct ChannelDiceRoll<'data> {
 	#[serde(rename = "channel")]
-	channel_id: &'data str,
+	pub(in crate::api) channel_id: &'data str,
 
-	character: &'data str,
-	message: &'data str,
+	pub(in crate::api) character: &'data str,
+	pub(in crate::api) message: &'data str,
 
 	#[serde(borrow, flatten)]
-	roll_data: data::ChannelRollType<'data>,
+	pub(in crate::api) roll_data: data::ChannelRollType<'data>,
 }
 
 command_prefix!(ChannelDiceRoll<'_>, "RLL");
 
 #[derive(Debug, Deserialize)]
 pub struct ChannelInvitation<'data> {
-	sender: &'data str,
-	title: &'data str,
-	name: &'data str,
+	pub(in crate::api) sender: &'data str,
+	pub(in crate::api) title: &'data str,
+	pub(in crate::api) name: &'data str,
 }
 
 command_prefix!(ChannelInvitation<'_>, "CIU");
@@ -83,10 +84,10 @@ command_prefix!(ChannelInvitation<'_>, "CIU");
 #[derive(Debug, Deserialize)]
 pub struct ChannelMemberBan<'data> {
 	#[serde(rename = "channel")]
-	channel_id: &'data str,
+	pub(in crate::api) channel_id: &'data str,
 
-	operator: &'data str,
-	character: &'data str,
+	pub(in crate::api) operator: &'data str,
+	pub(in crate::api) character: &'data str,
 }
 
 command_prefix!(ChannelMemberBan<'_>, "CBU");
@@ -94,9 +95,9 @@ command_prefix!(ChannelMemberBan<'_>, "CBU");
 #[derive(Debug, Deserialize)]
 pub struct ChannelMemberDemotion<'data> {
 	#[serde(rename = "channel")]
-	channel_id: &'data str,
+	pub(in crate::api) channel_id: &'data str,
 
-	character: &'data str,
+	pub(in crate::api) character: &'data str,
 }
 
 command_prefix!(ChannelMemberDemotion<'_>, "COR");
@@ -104,10 +105,10 @@ command_prefix!(ChannelMemberDemotion<'_>, "COR");
 #[derive(Debug, Deserialize)]
 pub struct ChannelMemberKick<'data> {
 	#[serde(rename = "channel")]
-	channel_id: &'data str,
+	pub(in crate::api) channel_id: &'data str,
 
-	operator: &'data str,
-	character: &'data str,
+	pub(in crate::api) operator: &'data str,
+	pub(in crate::api) character: &'data str,
 }
 
 command_prefix!(ChannelMemberKick<'_>, "CKU");
@@ -115,9 +116,9 @@ command_prefix!(ChannelMemberKick<'_>, "CKU");
 #[derive(Debug, Deserialize)]
 pub struct ChannelMemberPromotion<'data> {
 	#[serde(rename = "channel")]
-	channel_id: &'data str,
+	pub(in crate::api) channel_id: &'data str,
 
-	character: &'data str,
+	pub(in crate::api) character: &'data str,
 }
 
 command_prefix!(ChannelMemberPromotion<'_>, "COA");
@@ -125,13 +126,13 @@ command_prefix!(ChannelMemberPromotion<'_>, "COA");
 #[derive(Debug, Deserialize)]
 pub struct ChannelMemberTimeout<'data> {
 	#[serde(rename = "channel")]
-	channel_id: &'data str,
+	pub(in crate::api) channel_id: &'data str,
 
-	operator: &'data str,
-	character: &'data str,
+	pub(in crate::api) operator: &'data str,
+	pub(in crate::api) character: &'data str,
 
 	#[serde(rename = "length")]
-	timeout_duration: u8,
+	pub(in crate::api) timeout_duration: u8,
 }
 
 command_prefix!(ChannelMemberTimeout<'_>, "CTU");
@@ -139,10 +140,10 @@ command_prefix!(ChannelMemberTimeout<'_>, "CTU");
 #[derive(Debug, Deserialize)]
 pub struct ChannelOpsList<'data> {
 	#[serde(rename = "channel")]
-	channel_id: &'data str,
+	pub(in crate::api) channel_id: &'data str,
 
 	#[serde(borrow, rename = "oplist")]
-	ops: Vec<&'data str>,
+	pub(in crate::api) ops: Vec<&'data str>,
 }
 
 command_prefix!(ChannelOpsList<'_>, "COL");
@@ -152,7 +153,7 @@ command_prefix!(ChannelOpsList<'_>, "COL");
 #[derive(Debug, Deserialize)]
 pub struct ChannelsListOpen<'data> {
 	#[serde(borrow)]
-	channels: Vec<data::ChannelDataOpen<'data>>,
+	pub(in crate::api) channels: Vec<data::ChannelDataOpen<'data>>,
 }
 
 command_prefix!(ChannelsListOpen<'_>, "ORS");
@@ -160,7 +161,7 @@ command_prefix!(ChannelsListOpen<'_>, "ORS");
 #[derive(Debug, Deserialize)]
 pub struct ChannelsListPublic<'data> {
 	#[serde(borrow)]
-	channels: Vec<data::ChannelDataPublic<'data>>,
+	pub(in crate::api) channels: Vec<data::ChannelDataPublic<'data>>,
 }
 
 command_prefix!(ChannelsListPublic<'_>, "CHA");
@@ -169,9 +170,9 @@ command_prefix!(ChannelsListPublic<'_>, "CHA");
 
 #[derive(Debug)]
 pub struct CharacterChangeStatus<'data> {
-	character: &'data str,
-	status: &'data str,
-	message: Option<&'data str>,
+	pub(in crate::api) character: &'data str,
+	pub(in crate::api) status: &'data str,
+	pub(in crate::api) message: Option<&'data str>,
 }
 
 command_prefix!(CharacterChangeStatus<'_>, "STA");
@@ -283,10 +284,10 @@ impl<'data, 'de: 'data> Deserialize<'de> for CharacterChangeStatus<'data> {
 #[serde_as]
 #[derive(Debug, Deserialize)]
 pub struct CharacterChangeTypingStatus<'data> {
-	character: &'data str,
+	pub(in crate::api) character: &'data str,
 
 	#[serde_as(deserialize_as = "DefaultOnError")]
-	status: super::CharacterTypingStatus,
+	pub(in crate::api) status: super::CharacterTypingStatus,
 }
 
 command_prefix!(CharacterChangeTypingStatus<'_>, "TPN");
@@ -294,13 +295,13 @@ command_prefix!(CharacterChangeTypingStatus<'_>, "TPN");
 #[derive(Debug, Deserialize)]
 pub struct CharacterJoinedChannel<'data> {
 	#[serde(rename = "channel")]
-	channel_id: &'data str,
+	pub(in crate::api) channel_id: &'data str,
 
 	#[serde(rename = "title")]
-	channel_name: &'data str,
+	pub(in crate::api) channel_name: &'data str,
 
 	#[serde(borrow)]
-	character: data::CharacterName<'data>
+	pub(in crate::api) character: data::CharacterName<'data>
 }
 
 command_prefix!(CharacterJoinedChannel<'_>, "JCH");
@@ -327,9 +328,9 @@ command_prefix!(CharacterKinksList<'_>, "KID");
 #[derive(Debug, Deserialize)]
 pub struct CharacterLeftChannel<'data> {
 	#[serde(rename = "channel")]
-	channel_id: &'data str,
+	pub(in crate::api) channel_id: &'data str,
 
-	character: &'data str,
+	pub(in crate::api) character: &'data str,
 }
 
 command_prefix!(CharacterLeftChannel<'_>, "LCH");
@@ -338,19 +339,19 @@ command_prefix!(CharacterLeftChannel<'_>, "LCH");
 #[derive(Debug, Deserialize)]
 pub struct CharacterLoggedIn<'data> {
 	#[serde(rename = "identity")]
-	character: &'data str,
+	pub(in crate::api) character: &'data str,
 
 	#[serde_as(deserialize_as = "DefaultOnError")]
-	gender: characters::CharacterGender,
+	pub(in crate::api) gender: characters::CharacterGender,
 
-	status: &'data str,
+	pub(in crate::api) status: &'data str,
 }
 
 command_prefix!(CharacterLoggedIn<'_>, "NLN");
 
 #[derive(Debug, Deserialize)]
 pub struct CharacterLoggedOut<'data> {
-	character: &'data str,
+	pub(in crate::api) character: &'data str,
 }
 
 command_prefix!(CharacterLoggedOut<'_>, "FLN");
@@ -388,8 +389,8 @@ command_prefix!(ClientHeartbeatRequest, "PIN");
 #[derive(Debug, Deserialize)]
 pub struct RealTimeBridgeMessage<'data> {
 	#[serde(rename = "type")]
-	kind: data::RealTimeBridgeMessageKind,
-	character: &'data str,
+	pub(in crate::api) kind: data::RealTimeBridgeMessageKind,
+	pub(in crate::api) character: &'data str,
 }
 
 command_prefix!(RealTimeBridgeMessage<'_>, "RTB");
@@ -397,10 +398,10 @@ command_prefix!(RealTimeBridgeMessage<'_>, "RTB");
 #[derive(Debug, Deserialize)]
 pub struct ReceiveAd<'data> {
 	#[serde(rename = "channel")]
-	channel_id: &'data str,
+	pub(in crate::api) channel_id: &'data str,
 
-	character: &'data str,
-	message: &'data str,
+	pub(in crate::api) character: &'data str,
+	pub(in crate::api) message: &'data str,
 }
 
 command_prefix!(ReceiveAd<'_>, "LRP");
@@ -408,18 +409,18 @@ command_prefix!(ReceiveAd<'_>, "LRP");
 #[derive(Debug, Deserialize)]
 pub struct ReceiveMessage<'data> {
 	#[serde(rename = "channel")]
-	channel_id: &'data str,
+	pub(in crate::api) channel_id: &'data str,
 
-	character: &'data str,
-	message: &'data str,
+	pub(in crate::api) character: &'data str,
+	pub(in crate::api) message: &'data str,
 }
 
 command_prefix!(ReceiveMessage<'_>, "MSG");
 
 #[derive(Debug, Deserialize)]
 pub struct ReceivePrivateMessage<'data> {
-	character: &'data str,
-	message: &'data str,
+	pub(in crate::api) character: &'data str,
+	pub(in crate::api) message: &'data str,
 }
 
 command_prefix!(ReceivePrivateMessage<'_>, "PRI");
@@ -428,21 +429,21 @@ command_prefix!(ReceivePrivateMessage<'_>, "PRI");
 
 #[derive(Debug, Deserialize)]
 pub struct ServerBroadcast<'data> {
-	message: &'data str,
+	pub(in crate::api) message: &'data str,
 }
 
 command_prefix!(ServerBroadcast<'_>, "BRO");
 
 #[derive(Debug, Deserialize)]
 pub struct ServerMemberDemotion<'data> {
-	character: &'data str,
+	pub(in crate::api) character: &'data str,
 }
 
 command_prefix!(ServerMemberDemotion<'_>, "DOP");
 
 #[derive(Debug, Deserialize)]
 pub struct ServerMemberPromotion<'data> {
-	character: &'data str,
+	pub(in crate::api) character: &'data str,
 }
 
 command_prefix!(ServerMemberPromotion<'_>, "PRO");
@@ -450,7 +451,7 @@ command_prefix!(ServerMemberPromotion<'_>, "PRO");
 #[derive(Debug, Deserialize)]
 pub struct ServerOpsList<'data> {
 	#[serde(borrow)]
-	ops: Vec<&'data str>,
+	pub(in crate::api) ops: Vec<&'data str>,
 }
 
 command_prefix!(ServerOpsList<'_>, "ADL");
@@ -460,7 +461,7 @@ command_prefix!(ServerOpsList<'_>, "ADL");
 #[derive(Debug, Deserialize)]
 pub struct ServerCharacterCount {
 	#[serde(rename = "count")]
-	character_count: u64,
+	pub(in crate::api) character_count: u64,
 }
 
 command_prefix!(ServerCharacterCount, "CON");
@@ -468,7 +469,7 @@ command_prefix!(ServerCharacterCount, "CON");
 #[derive(Debug, Deserialize)]
 pub struct ServerCharactersList<'data> {
 	#[serde(borrow)]
-	characters: Vec<[&'data str; 4]>,
+	pub(in crate::api) characters: Vec<[&'data str; 4]>,
 }
 
 command_prefix!(ServerCharactersList<'_>, "LIS");
@@ -476,9 +477,9 @@ command_prefix!(ServerCharactersList<'_>, "LIS");
 #[derive(Debug, Deserialize)]
 pub struct ServerError<'data> {
 	#[serde(rename = "number")]
-	code: u64,
+	pub(in crate::api) code: u64,
 
-	message: &'data str,
+	pub(in crate::api) message: &'data str,
 }
 
 command_prefix!(ServerError<'_>, "ERR");
@@ -486,9 +487,9 @@ command_prefix!(ServerError<'_>, "ERR");
 #[derive(Debug, Deserialize)]
 pub struct ServerMessage<'data> {
 	#[serde(rename = "channel")]
-	channel_id: &'data str,
+	pub(in crate::api) channel_id: &'data str,
 
-	message: &'data str,
+	pub(in crate::api) message: &'data str,
 }
 
 command_prefix!(ServerMessage<'_>, "SYS");
@@ -496,22 +497,22 @@ command_prefix!(ServerMessage<'_>, "SYS");
 #[derive(Debug, Deserialize)]
 pub struct ServerUptime<'data> {
 	#[serde(rename = "time")]
-	uptime: u64,
+	pub(in crate::api) uptime: u64,
 
 	#[serde(rename = "starttime")]
-	boot_timestamp: u64,
+	pub(in crate::api) boot_timestamp: u64,
 
 	#[serde(rename = "startstring")]
-	boot_datetime: &'data str,
+	pub(in crate::api) boot_datetime: &'data str,
 
 	#[serde(rename = "accepted")]
-	total_accepted_connections_count: u64,
+	pub(in crate::api) total_accepted_connections_count: u64,
 
 	#[serde(rename = "users")]
-	current_user_count: u64,
+	pub(in crate::api) current_user_count: u64,
 
 	#[serde(rename = "maxusers")]
-	peak_user_count: u64,
+	pub(in crate::api) peak_user_count: u64,
 }
 
 command_prefix!(ServerUptime<'_>, "UPT");
@@ -560,7 +561,7 @@ command_prefix!(ServerVariable<'_>, "VAR");
 
 #[derive(Debug, Deserialize)]
 pub struct ServerWelcome<'data> {
-	message: &'data str,
+	pub(in crate::api) message: &'data str,
 }
 
 command_prefix!(ServerWelcome<'_>, "HLO");
@@ -570,7 +571,7 @@ command_prefix!(ServerWelcome<'_>, "HLO");
 #[derive(Debug, Deserialize)]
 pub struct UserFriendsList<'data> {
 	#[serde(borrow)]
-	characters: Vec<&'data str>,
+	pub(in crate::api) characters: Vec<&'data str>,
 }
 
 command_prefix!(UserFriendsList<'_>, "FRL");
@@ -578,7 +579,7 @@ command_prefix!(UserFriendsList<'_>, "FRL");
 #[derive(Debug, Deserialize)]
 pub struct UserIdentificationSuccessful<'data> {
 	#[serde(rename = "character")]
-	character_name: &'data str,
+	pub(in crate::api) character_name: &'data str,
 }
 
 command_prefix!(UserIdentificationSuccessful<'_>, "IDN");
@@ -620,16 +621,16 @@ command_prefix!(UserIgnoreListAction<'_>, "IGN");
 #[derive(Debug, Deserialize)]
 pub struct UserSupportRequest<'data> {
 	#[serde(rename = "callid")]
-	alert_id: u64,
+	pub(in crate::api) alert_id: u64,
 
 	#[serde(rename = "character")]
-	issuer_name: &'data str,
+	pub(in crate::api) issuer_name: &'data str,
 
 	#[serde(borrow, flatten)]
-	data: data::UserSupportRequestData<'data>,
+	pub(in crate::api) data: data::UserSupportRequestData<'data>,
 
 	#[serde_as(as = "DisplayFromStr")]
-	timestamp: u64,
+	pub(in crate::api) timestamp: u64,
 }
 
 command_prefix!(UserSupportRequest<'_>, "SFC");
@@ -638,10 +639,10 @@ command_prefix!(UserSupportRequest<'_>, "SFC");
 #[derive(Debug, Deserialize)]
 pub struct UserSearchResults<'data> {
 	#[serde(borrow)]
-	characters: Vec<&'data str>,
+	pub(in crate::api) characters: Vec<&'data str>,
 
 	#[serde_as(as = "Vec<DisplayFromStr>")]
-	kinks: Vec<u64>,
+	pub(in crate::api) kinks: Vec<u64>,
 }
 
 command_prefix!(UserSearchResults<'_>, "FKS");
@@ -650,7 +651,7 @@ command_prefix!(UserSearchResults<'_>, "FKS");
 // DATA
 // -----------------------------------------------------------------------------
 mod data {
-	use crate::api::remote::commands::ChannelMode;
+	use crate::api::channels;
     use bitflags::bitflags;
     use serde::Deserialize;
     use serde_with::DeserializeFromStr;
@@ -659,23 +660,23 @@ mod data {
 	#[derive(Debug, Deserialize)]
 	pub struct ChannelDataOpen<'data> {
 		#[serde(rename = "name")]
-		channel_id: &'data str,
+		pub(in crate::api) channel_id: &'data str,
 
 		#[serde(rename = "title")]
-		channel_name: ChannelMode,
+		pub(in crate::api) channel_name: channels::ChannelMode,
 
 		#[serde(rename = "characters")]
-		member_count: u64,
+		pub(in crate::api) member_count: u64,
 	}
 
 	#[derive(Debug, Deserialize)]
 	pub struct ChannelDataPublic<'data> {
 		#[serde(rename = "name")]
-		channel_id: &'data str,
-		mode: ChannelMode,
+		pub(in crate::api) channel_id: &'data str,
+		pub(in crate::api) mode: channels::ChannelMode,
 
 		#[serde(rename = "characters")]
-		member_count: u64,
+		pub(in crate::api) member_count: u64,
 	}
 
 	#[derive(Debug, Deserialize)]
@@ -699,7 +700,7 @@ mod data {
 	#[derive(Debug, Deserialize)]
 	pub struct CharacterName<'data> {
 		#[serde(rename = "identity")]
-		name: &'data str,
+		pub(in crate::api) name: &'data str,
 	}
 
 	#[derive(Debug, Deserialize)]

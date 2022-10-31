@@ -1,7 +1,11 @@
+pub mod channels;
+pub mod characters;
 pub mod error;
 pub mod url_helpers;
 
 mod remote;
+
+pub use crate::api::remote::constants::headers;
 
 use crate::api::characters::CharacterId;
 use crate::api::error::Result as ApiResult;
@@ -10,6 +14,7 @@ use crate::util::hex::{Hex, HexFromStrError};
 use reqwest::Client as HttpClient;
 use serde::Serialize;
 use tauri::async_runtime::Mutex;
+use tokio::sync::MutexGuard;
 use std::collections::HashMap;
 use std::{fmt, str};
 use thiserror::Error;
@@ -22,7 +27,7 @@ type FriendsList = HashMap<CharacterId, Vec<String>>;
 const TICKET_LIFETIME: Duration = Duration::minutes(5);
 
 #[derive(Serialize)]
-pub struct Account {
+pub struct AccountCredentials {
 	ticket: Ticket,
 
 	#[serde(rename = "account")]
@@ -35,16 +40,53 @@ pub struct Account {
 	expires_at: OffsetDateTime,
 }
 
+impl AccountCredentials {
+	async fn refresh_ticket(&mut self, http: HttpClient) -> ApiResult<()> {
+		self.ticket = GetApiTicket::new(&self.username, &self.password)
+			.execute(http).await?
+			.into_ticket();
+
+		self.expires_at = OffsetDateTime::now_utc() + TICKET_LIFETIME;
+
+		Ok(())
+	}
+
+	async fn refresh_if_needed(&mut self, http: HttpClient) -> ApiResult<()> {
+		if self.expires_at <= OffsetDateTime::now_utc() {
+			self.refresh_ticket(http).await?;
+		};
+
+		Ok(())
+	}
+
+	fn invalidate_ticket(&mut self) {
+		self.expires_at = OffsetDateTime::now_utc();
+	}
+}
+
+impl fmt::Debug for AccountCredentials {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		write!(f, "<F-List API Account>")
+	}
+}
+
+#[derive(Debug)]
+pub struct Account {
+	pub default_character: CharacterId,
+
+	pub bookmarks_list: BookmarksList,
+	pub characters_list: CharactersList,
+	pub friends_list: FriendsList,
+
+	credentials: Mutex<AccountCredentials>,
+}
+
 impl Account {
 	async fn authenticate(
 		http: HttpClient,
-		bookmarks_list: &mut Option<BookmarksList>,
-		characters_list: &mut Option<CharactersList>,
-		friends_list: &mut Option<FriendsList>,
-		default_character: &mut Option<CharacterId>,
 		username: &str,
 		password: &str,
-	) -> ApiResult<Account> {
+	) -> ApiResult<Self> {
 		let account = GetApiTicket::new(username, password)
 			.include_bookmarks()
 			.include_characters()
@@ -77,108 +119,53 @@ impl Account {
 			map
 		});
 
-		bookmarks_list.replace(bookmarks.collect());
-		characters_list.replace(characters.collect());
-		friends_list.replace(friends);
+		let bookmarks_list = bookmarks.collect();
+		let characters_list = characters.collect();
+		let friends_list = friends;
 
-		default_character.replace(*account.default_character());
+		let default_character = *account.default_character();
 
-		Ok(Account {
+		let credentials = Mutex::new(AccountCredentials {
 			username: String::from(username),
 			password: String::from(password),
 			ticket: account.into_ticket(),
 
 			expires_at: OffsetDateTime::now_utc() + TICKET_LIFETIME,
-		})
-	}
+		});
 
-	async fn refresh_ticket(&mut self, http: HttpClient) -> ApiResult<()> {
-		self.ticket = GetApiTicket::new(&self.username, &self.password)
-			.execute(http).await?
-			.into_ticket();
-
-		self.expires_at = OffsetDateTime::now_utc() + TICKET_LIFETIME;
-
-		Ok(())
-	}
-
-	async fn refresh_if_needed(&mut self, http: HttpClient) -> ApiResult<()> {
-		if self.expires_at <= OffsetDateTime::now_utc() {
-			self.refresh_ticket(http).await?;
-		};
-
-		Ok(())
-	}
-
-	fn invalidate_ticket(&mut self) {
-		self.expires_at = OffsetDateTime::now_utc();
-	}
-}
-
-impl fmt::Debug for Account {
-	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-		write!(f, "<F-List API Account>")
-	}
-}
-
-#[derive(Debug)]
-pub struct AccountInfo {
-	pub default_character: CharacterId,
-
-	pub bookmarks_list: BookmarksList,
-	pub characters_list: CharactersList,
-	pub friends_list: FriendsList,
-}
-
-#[derive(Debug)]
-pub struct ApiClient {
-	account: Mutex<Account>,
-	http: HttpClient,
-}
-
-impl ApiClient {
-	/// Attempt to obtain an API token from the F-List API.
-	pub async fn authenticate(
-		http: HttpClient,
-		username: &str,
-		password: &str,
-	) -> ApiResult<(ApiClient, AccountInfo)> {
-		let mut bookmarks_list = None;
-		let mut characters_list = None;
-		let mut friends_list = None;
-		let mut default_character = None;
-
-		let account = Mutex::new(Account::authenticate(
-			http.clone(),
-			&mut bookmarks_list,
-			&mut characters_list,
-			&mut friends_list,
-			&mut default_character,
-			username,
-			password,
-		).await?);
-
-		// Either we successfully assigned to the references above, or we
-		// crashed when trying to retrieve the values. Either way, if we get
-		// here, these options contain values.
-		let bookmarks_list = bookmarks_list.unwrap();
-		let characters_list = characters_list.unwrap();
-		let friends_list = friends_list.unwrap();
-		let default_character = default_character.unwrap();
-
-		let client = ApiClient {
-			account,
-			http,
-		};
-
-		let account_info = AccountInfo {
+		let account = Account {
+			credentials,
 			default_character,
 			bookmarks_list,
 			characters_list,
 			friends_list
 		};
 
-		Ok((client, account_info))
+		Ok(account)
+	}
+
+	async fn credentials(&self) -> MutexGuard<'_, AccountCredentials> {
+		self.credentials.lock().await
+	}
+}
+
+#[derive(Debug)]
+pub struct ApiClient {
+	account: Account,
+	http: HttpClient,
+}
+
+impl ApiClient {
+	/// Attempt to authenticate with the F-List API.
+	pub async fn authenticate(
+		http: HttpClient,
+		username: &str,
+		password: &str,
+	) -> ApiResult<ApiClient> {
+		Ok(ApiClient {
+			account: Account::authenticate(http.clone(), username, password).await?,
+			http,
+		})
 	}
 
 	/// Mark the current API ticket as invalid.
@@ -186,8 +173,13 @@ impl ApiClient {
 	/// Useful for when the API returns the error "Invalid ticket." The API
 	/// call should be attempted again after calling this function.
 	pub fn invalidate_ticket(&mut self) {
-		self.account.blocking_lock()
+		self.account.credentials.blocking_lock()
 			.invalidate_ticket();
+	}
+
+	/// Retrieve the account information from this API client.
+	pub fn account(&self) -> &Account {
+		&self.account
 	}
 
 	/// Retrieve the HTTP client from this API client.

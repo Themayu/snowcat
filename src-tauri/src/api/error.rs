@@ -1,6 +1,6 @@
 use std::convert::Infallible;
 use std::str;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, NoneAsEmptyString};
 use snowcat_macros::discriminate;
 use thiserror::Error;
@@ -11,7 +11,7 @@ const INVALID_TICKET: &str = "Invalid ticket";
 pub type Result<T> = std::result::Result<T, ApiError>;
 
 #[discriminate]
-#[derive(Debug, Error)]
+#[derive(Debug, Error, Deserialize, Serialize)]
 pub enum ApiError {
 	#[error("err-invalid-login-credentials")]
 	InvalidLoginCredentials,
@@ -54,9 +54,11 @@ impl<T> DeserializeError<T> {
 	}
 
 	pub fn into_result(self) -> Result<T> {
-		match self.error {
+		let DeserializeError { data, error } = self;
+
+		match error {
 			Some(err) => Err(err.parse().expect("conversion is infallible")),
-			None => Ok(self.data.expect("data should exist"))
+			None => Ok(data.expect("data should exist"))
 		}
 	}
 }

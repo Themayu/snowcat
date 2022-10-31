@@ -1,7 +1,8 @@
 use std::borrow::{Cow, Borrow};
 use std::convert::TryInto;
-use std::fmt;
-use std::str::FromStr;
+use std::ops::ControlFlow;
+use std::{fmt, slice, str};
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 #[cfg(feat_array_chunks)]
@@ -26,7 +27,8 @@ const TABLE: [(u8, u8); 16] = [
 	(b'f', 15),
 ];
 
-#[derive(Clone, Copy)]
+#[repr(transparent)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct HexByte(u8);
 
 impl HexByte {
@@ -36,13 +38,6 @@ impl HexByte {
 
 	pub fn from_byte(byte: u8) -> HexByte {
 		HexByte(byte)
-	}
-	
-	unsafe fn get_char_unchecked(byte: u8) -> char {
-		let byte: usize = byte.into();
-		let value = TABLE.get_unchecked(byte).0;
-
-		char::from_u32_unchecked(value as u32)
 	}
 
 	fn to_high(self) -> char {
@@ -61,6 +56,13 @@ impl HexByte {
 		unsafe {
 			Self::get_char_unchecked(byte)
 		}
+	}
+
+	unsafe fn get_char_unchecked(byte: u8) -> char {
+		let byte: usize = byte.into();
+		let value = TABLE.get_unchecked(byte).0;
+
+		char::from_u32_unchecked(value as u32)
 	}
 }
 
@@ -85,16 +87,114 @@ impl fmt::Display for HexByte {
 	}
 }
 
-#[derive(Debug, Clone, Copy)]
+impl<'de> Deserialize<'de> for HexByte {
+	fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+	where
+		D: serde::Deserializer<'de>,
+	{
+		use serde::de::{Error, Unexpected, Visitor};
+
+		struct ByteVisitor;
+		impl<'de> Visitor<'de> for ByteVisitor {
+			type Value = HexByte;
+
+			fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+				write!(f, "a value between 0-255, or a hexadecimal pair")
+			}
+
+			fn visit_u8<E>(self, byte: u8) -> Result<Self::Value, E>
+			where
+				E: Error,
+			{
+				Ok(HexByte(byte))
+			}
+
+			fn visit_str<E>(self, string: &str) -> Result<Self::Value, E>
+			where
+				E: Error,
+			{
+				let mut string = Cow::Borrowed(string);
+
+				if string.len() < 1 || string.len() > 2 {
+					return Err(Error::invalid_value(
+						Unexpected::Str(string.borrow()),
+						&"one or two hexadecimal digits"
+					));
+				}
+
+				if !string.is_ascii() {
+					return Err(Error::invalid_value(Unexpected::Str(string.borrow()), &"a valid ascii string"));
+				}
+
+				fn find_byte<E>(codepoint: u8) -> Result<u8, E>
+				where
+					E: Error,
+				{
+					TABLE.iter()
+						.find_map(|&(c, byte)| (c == codepoint.to_ascii_lowercase()).then_some(byte))
+						.ok_or_else(|| Error::invalid_value(
+							Unexpected::Char(unsafe { char::from_u32_unchecked(codepoint.into()) }),
+							&"a hexadecimal digit",
+						))
+				}
+
+				if string.len() == 1 {
+					string.to_mut().insert(0, '0');
+				}
+
+				let [high, low] = match string.as_bytes() {
+					[high, low] => [*high, *low],
+					_ => unreachable!("string is always ascii of length 2"),
+				};
+
+				let high = find_byte(high)? << 4;
+				let low = find_byte(low)?;
+
+				let byte = high | low;
+
+				Ok(HexByte(byte))
+			}
+		}
+
+		deserializer.deserialize_any(ByteVisitor)
+	}
+}
+
+impl Serialize for HexByte {
+	fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+	where
+		S: serde::Serializer,
+	{
+		serializer.serialize_u8(self.to_byte())
+	}
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Hex<const BYTES: usize>([HexByte; BYTES]);
 
 impl<const N: usize> Hex<N> {
-	pub fn from_bytes(bytes: [u8; N]) -> Self {
-		Hex(bytes.map(HexByte::from_byte))
+	pub fn as_bytes(&self) -> &[u8] {
+		let ptr_start = self.0.as_ptr() as *const u8;
+
+		// SAFETY: HexByte is repr(transparent), so it has the exact same
+		// memory representation as u8. In addition, the pointer has provenance
+		// for the entire array, as it comes from the array.
+		unsafe {
+			slice::from_raw_parts(ptr_start, N)
+		}
 	}
 
-	pub fn to_bytes(self) -> [u8; N] {
-		self.0.map(HexByte::to_byte)
+	pub fn as_bytes_mut(&mut self) -> &mut [u8] {
+		let ptr_start = self.0.as_mut_ptr() as *mut u8;
+
+		// SAFETY: HexByte is repr(transparent), so it has the exact same
+		// memory representation as u8. In addition, the pointer has provenance
+		// for the entire array, as it comes from the array. Finally, `Hex` is
+		// borrowed as mutable, so we cannot obtain multiple references through
+		// this function.
+		unsafe {
+			slice::from_raw_parts_mut(ptr_start, N)
+		}
 	}
 }
 
@@ -132,7 +232,107 @@ impl<const N: usize> fmt::Display for Hex<N> {
 	}
 }
 
-impl<const BYTES: usize> FromStr for Hex<BYTES> {
+impl<'de, const BYTES: usize> Deserialize<'de> for Hex<BYTES> {
+	fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+	where
+		D: serde::Deserializer<'de>,
+	{
+		use serde::de::{Error, SeqAccess, Unexpected, Visitor};
+
+		struct HexVisitor<const BYTES: usize>;
+		impl<'de, const BYTES: usize> Visitor<'de> for HexVisitor<BYTES> {
+			type Value = Hex<BYTES>;
+
+			fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+				write!(f, "an array of bytes or a hexadecimal string")
+			}
+
+			fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+			where
+				A: SeqAccess<'de>,
+			{
+				let err_text = format!("less than or equal to {BYTES} elements");
+				let err_text = err_text.as_str();
+
+				if let Some(size) = seq.size_hint() {
+					if size > BYTES {
+						return Err(Error::invalid_length(size, &err_text));
+					}
+				}
+
+				let mut bytes = [0; BYTES];
+				let res: ControlFlow<Result<(), A::Error>> = bytes.iter_mut().rev().try_for_each(|place| {
+					match seq.next_element::<u8>() {
+						Ok(value) => match value {
+							Some(value) => {
+								*place = value;
+								ControlFlow::Continue(())
+							},
+
+							None => ControlFlow::Break(Ok(())),
+						},
+
+						Err(err) => ControlFlow::Break(Err(err)),
+					}
+				});
+
+				if let Some(_) = seq.next_element::<u8>()? {
+					return Err(Error::invalid_length(bytes.len() + 1, &err_text))
+				}
+
+				match res {
+					ControlFlow::Continue(_)
+					| ControlFlow::Break(Ok(_)) => Ok(bytes.into()),
+
+					ControlFlow::Break(Err(err)) => Err(err),
+				}
+			}
+
+			fn visit_str<E>(self, string: &str) -> Result<Self::Value, E>
+			where
+				E: Error,
+			{
+				let err_text = format!("less than or equal to {} hexadecimal characters", BYTES * 2);
+				let err_text = err_text.as_str();
+
+				string.parse().map_err(|err| match err {
+					HexFromStrError::InputTooLong { actual, .. } => Error::invalid_length(actual, &err_text),
+					HexFromStrError::NotAscii => Error::invalid_type(Unexpected::Str(string), &"a valid ascii string"),
+
+					HexFromStrError::UnexpectedCharacter { codepoint } => Error::invalid_value(
+						Unexpected::Char(unsafe { char::from_u32_unchecked(codepoint.into()) }),
+						&"a hexadecimal digit",
+					),
+				})
+			}
+		}
+
+		deserializer.deserialize_any(HexVisitor)
+	}
+}
+
+impl<const BYTES: usize> Serialize for Hex<BYTES> {
+	fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+	where
+		S: serde::Serializer,
+	{
+		serializer.serialize_str(&self.to_string())
+	}
+}
+
+impl<const BYTES: usize> From<Hex<BYTES>> for [u8; BYTES] {
+	fn from(hex: Hex<BYTES>) -> Self {
+		hex.0.map(HexByte::to_byte)
+	}
+}
+
+impl<const BYTES: usize> From<[u8; BYTES]> for Hex<BYTES> {
+	fn from(bytes: [u8; BYTES]) -> Self {
+		Hex(bytes.map(HexByte::from_byte))
+	}
+}
+
+impl<const BYTES: usize> str::FromStr for Hex<BYTES> {
 	type Err = HexFromStrError;
 
 	fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -174,7 +374,7 @@ impl<const BYTES: usize> FromStr for Hex<BYTES> {
 				Ok(acc)
 			})?;
 
-		Ok(Self::from_bytes(bytes))
+		Ok(bytes.into())
 	}
 }
 

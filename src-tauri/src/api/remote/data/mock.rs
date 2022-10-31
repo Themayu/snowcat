@@ -1,10 +1,10 @@
+use crate::api::characters::CharacterId;
 use crate::api::remote::data::characters::GetChararacterResponse;
 use crate::api::remote::data::lists::{
 	GetInfoListResponse,
 	GetKinkListResponse,
 	GetMappingListResponse,
 };
-use snowcat_common::characters::CharacterId;
 
 macro_rules! include_mock {
 	($file_name: literal) => {

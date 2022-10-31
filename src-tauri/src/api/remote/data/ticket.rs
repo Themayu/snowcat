@@ -1,4 +1,5 @@
 use crate::api::Ticket;
+use crate::api::characters::CharacterId;
 use crate::api::error::{Result as ApiResult, DeserializeError};
 use crate::api::remote::data::mock;
 use reqwest::Client as HttpClient;
@@ -6,7 +7,6 @@ use serde::{Serialize, Deserialize};
 use serde::ser::SerializeStruct;
 use serde::de::DeserializeOwned;
 use serde_with::{serde_as, DisplayFromStr};
-use snowcat_common::characters::CharacterId;
 use std::collections::HashMap;
 use std::marker::PhantomData;
 

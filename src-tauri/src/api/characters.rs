@@ -39,6 +39,16 @@ pub struct CharacterInfo {
 	pub status: CharacterStatus,
 }
 
+impl CharacterInfo {
+	pub fn default_for(name: &str) -> Self {
+		CharacterInfo {
+			name: name.to_owned(),
+			gender: CharacterGender::Unknown,
+			status: CharacterStatus::new(CharacterStatusKind::Unknown),
+		}
+	}
+}
+
 impl PartialEq for CharacterInfo {
 	fn eq(&self, other: &Self) -> bool {
 		self.name == other.name
@@ -141,6 +151,9 @@ pub enum CharacterGender {
 	// Other genders
 	Transgender,
 	#[default] None,
+
+	// Unknown gender
+	Unknown
 }
 
 impl fmt::Display for CharacterGender {
@@ -161,6 +174,9 @@ impl fmt::Display for CharacterGender {
 			// Other genders
 			Self::Transgender => GENDER_TRANS,
 			Self::None => GENDER_NONE,
+
+			// Unknown gender
+			Self::Unknown => GENDER_NONE,
 		})
 	}
 }
@@ -507,5 +523,6 @@ pub enum CharacterStatusKind {
 	#[serde(rename = "dnd")]
 	DoNotDisturb,
 
+	Unknown,
 	Offline,
 }

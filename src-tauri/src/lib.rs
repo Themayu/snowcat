@@ -2,6 +2,7 @@
 
 pub mod api;
 pub mod client;
-pub mod socket;
+pub mod io;
 pub mod state;
+pub mod tauri;
 pub mod util;
