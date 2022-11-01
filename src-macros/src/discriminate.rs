@@ -3,7 +3,7 @@ use proc_macro2::Span;
 use quote::quote;
 use syn::punctuated::Punctuated;
 use syn::token::Comma;
-use syn::{parse_macro_input, ItemEnum, Ident, Variant, Fields, Pat, PatWild, Token};
+use syn::{parse_macro_input, Fields, Ident, ItemEnum, Variant};
 
 pub fn discriminate(input: TokenStream) -> TokenStream {
 	let input: ItemEnum = parse_macro_input!(input as ItemEnum);
@@ -29,20 +29,9 @@ pub fn discriminate(input: TokenStream) -> TokenStream {
 					#type_ident::#name { .. } => #discriminant_ident::#name
 				},
 
-				Fields::Unnamed(fields) => {
-					let mut elements = Punctuated::<Pat, Comma>::new();
-
-					fields.unnamed.pairs().for_each(|_| {
-						elements.push(Pat::Wild(PatWild {
-							attrs: vec![],
-							underscore_token: Token![_]([Span::call_site()]),
-						}))
-					});
-
-					quote! {
-						#type_ident::#name (#elements) => #discriminant_ident::#name
-					}
-				}
+				Fields::Unnamed(_) => quote! {
+					#type_ident::#name (..) => #discriminant_ident::#name
+				},
 			};
 
 			arms.push(pattern);

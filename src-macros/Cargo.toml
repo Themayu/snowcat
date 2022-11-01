@@ -3,10 +3,13 @@ name = "snowcat_macros"
 description = "Procedural macros used in Snowcat."
 authors = ["Dragon Wolf"]
 license = "MIT OR Apache-2.0"
-version = "1.0.0"
+version = "1.0.1"
 edition = "2021"
 repository = "https://github.com/Themayu/snowcat"
 readme = false
+
+[profile.release]
+lto = true
 
 [dependencies]
 proc-macro2 = "1.0"
