@@ -116,7 +116,7 @@ where Left: SignalVec,
 					Poll::Ready(Some(right)),
 				) => {
 					let priority = get_priority(&left, &right);
-					log::debug!(
+					log::trace!(
 						"{file}:{line} [{module}::<Merge2 as SignalVec>::poll_vec_change] priority is {priority:?}",
 						file = file!(), line = line!(), module = module_path!(),
 					);
@@ -138,7 +138,7 @@ where Left: SignalVec,
 
 		let op = match poll_result {
 			Poll::Ready(Some(MergedVecItem::Left(op))) => {
-				log::debug!(
+				log::trace!(
 					"{file}:{line} [{module}::<Merge2 as SignalVec>::poll_vec_change] op is Left({op:?})",
 					file = file!(), line = line!(), module = module_path!(),
 				);
@@ -147,7 +147,7 @@ where Left: SignalVec,
 			},
 
 			Poll::Ready(Some(MergedVecItem::Right(op))) => {
-				log::debug!(
+				log::trace!(
 					"{file}:{line} [{module}::<Merge2 as SignalVec>::poll_vec_change] op is Right({op:?})",
 					file = file!(), line = line!(), module = module_path!(),
 				);
@@ -1041,7 +1041,7 @@ where Left: Debug + Clone,
 	);
 
 	if items.len() == 0 {
-		log::debug!(
+		log::trace!(
 			"{file}:{line} [{module}::traverse_insert_into_at] items is empty; inserting {value:?} at 0",
 			file = file!(), line = line!(), module = module_path!(),
 		);
@@ -1071,7 +1071,7 @@ where Left: Debug + Clone,
 
 				match existing {
 					MergedVecItem::Left(_) => {
-						log::debug!(
+						log::trace!(
 							"{file}:{line} [{module}::traverse_insert_into_at] inserting {value:?} at {}", index + 1,
 							file = file!(), line = line!(), module = module_path!(),
 						);
@@ -1089,7 +1089,7 @@ where Left: Debug + Clone,
 							index = index - 1;
 							continue;
 						} else {
-							log::debug!(
+							log::trace!(
 								"{file}:{line} [{module}::traverse_insert_into_at] inserting {value:?} at {index}",
 								file = file!(), line = line!(), module = module_path!(),
 							);
@@ -1099,7 +1099,7 @@ where Left: Debug + Clone,
 
 						Ordering::Equal => unimplemented!("Ordering::Equal has unstable sorting sematics"),
 						Ordering::Greater => {
-							log::debug!(
+							log::trace!(
 								"{file}:{line} [{module}::traverse_insert_into_at] inserting {value:?} at {}", index + 1,
 								file = file!(), line = line!(), module = module_path!(),
 							);
@@ -1131,7 +1131,7 @@ where Left: Debug + Clone,
 
 				match existing {
 					MergedVecItem::Left(_) => {
-						log::debug!(
+						log::trace!(
 							"{file}:{line} [{module}::traverse_insert_into_at] inserting {value:?} at {index}",
 							file = file!(), line = line!(), module = module_path!(),
 						);
@@ -1141,7 +1141,7 @@ where Left: Debug + Clone,
 
 					MergedVecItem::Right(existing) => match order_fn(value.as_left(), existing) {
 						Ordering::Less => {
-							log::debug!(
+							log::trace!(
 								"{file}:{line} [{module}::traverse_insert_into_at] inserting {value:?} at {index}",
 								file = file!(), line = line!(), module = module_path!(),
 							);
@@ -1158,7 +1158,7 @@ where Left: Debug + Clone,
 							index = index + 1;
 							continue;
 						} else {
-							log::debug!(
+							log::trace!(
 								"{file}:{line} [{module}::traverse_insert_into_at] inserting {value:?} at {}", index + 1,
 								file = file!(), line = line!(), module = module_path!(),
 							);
@@ -1201,7 +1201,7 @@ where Left: Debug + Clone,
 			// this behaviour in its own function right now.
 			match existing {
 				MergedVecItem::Left(_) => {
-					log::debug!(
+					log::trace!(
 						"{file}:{line} [{module}::traverse_insert_into_at] inserting {value:?} at {index}",
 						file = file!(), line = line!(), module = module_path!(),
 					);
@@ -1223,7 +1223,7 @@ where Left: Debug + Clone,
 
 							match existing {
 								MergedVecItem::Left(_) => {
-									log::debug!(
+									log::trace!(
 										"{file}:{line} [{module}::traverse_insert_into_at] inserting {value:?} at {}", index + 1,
 										file = file!(), line = line!(), module = module_path!(),
 									);
@@ -1241,7 +1241,7 @@ where Left: Debug + Clone,
 										index = index - 1;
 										continue;
 									} else {
-										log::debug!(
+										log::trace!(
 											"{file}:{line} [{module}::traverse_insert_into_at] inserting {value:?} at {index}",
 											file = file!(), line = line!(), module = module_path!(),
 										);
@@ -1251,7 +1251,7 @@ where Left: Debug + Clone,
 
 									Ordering::Equal => unimplemented!("Ordering::Equal has unstable sorting sematics"),
 									Ordering::Greater => {
-										log::debug!(
+										log::trace!(
 											"{file}:{line} [{module}::traverse_insert_into_at] inserting {value:?} at {}", index + 1,
 											file = file!(), line = line!(), module = module_path!(),
 										);
@@ -1281,7 +1281,7 @@ where Left: Debug + Clone,
 
 							match existing {
 								MergedVecItem::Left(_) => {
-									log::debug!(
+									log::trace!(
 										"{file}:{line} [{module}::traverse_insert_into_at] inserting {value:?} at {index}",
 										file = file!(), line = line!(), module = module_path!(),
 									);
@@ -1291,7 +1291,7 @@ where Left: Debug + Clone,
 
 								MergedVecItem::Right(existing) => match order_fn(value.as_left(), existing) {
 									Ordering::Less => {
-										log::debug!(
+										log::trace!(
 											"{file}:{line} [{module}::traverse_insert_into_at] inserting {value:?} at {index}",
 											file = file!(), line = line!(), module = module_path!(),
 										);
@@ -1309,7 +1309,7 @@ where Left: Debug + Clone,
 										index = index + 1;
 										continue;
 									} else {
-										log::debug!(
+										log::trace!(
 											"{file}:{line} [{module}::traverse_insert_into_at] inserting {value:?} at {}", index + 1,
 											file = file!(), line = line!(), module = module_path!(),
 										);
@@ -1345,7 +1345,7 @@ where Left: Debug + Clone,
 				match existing {
 					MergedVecItem::Left(existing) => match order_fn(existing, value.as_right()) {
 						Ordering::Less => {
-							log::debug!(
+							log::trace!(
 								"{file}:{line} [{module}::traverse_insert_into_at] inserting {value:?} at {}", index + 1,
 								file = file!(), line = line!(), module = module_path!(),
 							);
@@ -1364,7 +1364,7 @@ where Left: Debug + Clone,
 							index = index - 1;
 							continue;
 						} else {
-							log::debug!(
+							log::trace!(
 								"{file}:{line} [{module}::traverse_insert_into_at] inserting {value:?} at {index}",
 								file = file!(), line = line!(), module = module_path!(),
 							);
@@ -1374,7 +1374,7 @@ where Left: Debug + Clone,
 					},
 
 					MergedVecItem::Right(_) => {
-						log::debug!(
+						log::trace!(
 							"{file}:{line} [{module}::traverse_insert_into_at] inserting {value:?} at {}", index + 1,
 							file = file!(), line = line!(), module = module_path!(),
 						);
@@ -1414,7 +1414,7 @@ where Left: Debug + Clone,
 							index = index + 1;
 							continue;
 						} else {
-							log::debug!(
+							log::trace!(
 								"{file}:{line} [{module}::traverse_insert_into_at] inserting {value:?} at {}", index + 1,
 								file = file!(), line = line!(), module = module_path!(),
 							);
@@ -1424,7 +1424,7 @@ where Left: Debug + Clone,
 
 						Ordering::Equal => unimplemented!("Ordering::Equal has unstable sorting sematics"),
 						Ordering::Greater => {
-							log::debug!(
+							log::trace!(
 								"{file}:{line} [{module}::traverse_insert_into_at] inserting {value:?} at {index}",
 								file = file!(), line = line!(), module = module_path!(),
 							);
@@ -1434,7 +1434,7 @@ where Left: Debug + Clone,
 					},
 
 					MergedVecItem::Right(_) => {
-						log::debug!(
+						log::trace!(
 							"{file}:{line} [{module}::traverse_insert_into_at] inserting {value:?} at {index}",
 							file = file!(), line = line!(), module = module_path!(),
 						);
@@ -1502,7 +1502,7 @@ where Left: Debug + Clone,
 										index = index + 1;
 										continue;
 									} else {
-										log::debug!(
+										log::trace!(
 											"{file}:{line} [{module}::traverse_insert_into_at] inserting {value:?} at {}", index + 1,
 											file = file!(), line = line!(), module = module_path!(),
 										);
@@ -1512,7 +1512,7 @@ where Left: Debug + Clone,
 
 									Ordering::Equal => unimplemented!("Ordering::Equal has unstable sorting sematics"),
 									Ordering::Greater => {
-										log::debug!(
+										log::trace!(
 											"{file}:{line} [{module}::traverse_insert_into_at] inserting {value:?} at {index}",
 											file = file!(), line = line!(), module = module_path!(),
 										);
@@ -1522,7 +1522,7 @@ where Left: Debug + Clone,
 								},
 
 								MergedVecItem::Right(_) => {
-									log::debug!(
+									log::trace!(
 										"{file}:{line} [{module}::traverse_insert_into_at] inserting {value:?} at {index}",
 										file = file!(), line = line!(), module = module_path!(),
 									);
@@ -1548,7 +1548,7 @@ where Left: Debug + Clone,
 							match existing {
 								MergedVecItem::Left(existing) => match order_fn(existing, value.as_right()) {
 									Ordering::Less => {
-										log::debug!(
+										log::trace!(
 											"{file}:{line} [{module}::traverse_insert_into_at] inserting {value:?} at {}", index + 1,
 											file = file!(), line = line!(), module = module_path!(),
 										);
@@ -1566,7 +1566,7 @@ where Left: Debug + Clone,
 										index = index - 1;
 										continue;
 									} else {
-										log::debug!(
+										log::trace!(
 											"{file}:{line} [{module}::traverse_insert_into_at] inserting {value:?} at {index}",
 											file = file!(), line = line!(), module = module_path!(),
 										);
@@ -1576,7 +1576,7 @@ where Left: Debug + Clone,
 								},
 
 								MergedVecItem::Right(_) => {
-									log::debug!(
+									log::trace!(
 										"{file}:{line} [{module}::traverse_insert_into_at] inserting {value:?} at {}", index + 1,
 										file = file!(), line = line!(), module = module_path!(),
 									);
@@ -1589,7 +1589,7 @@ where Left: Debug + Clone,
 				}
 
 				MergedVecItem::Right(_) => {
-					log::debug!(
+					log::trace!(
 						"{file}:{line} [{module}::traverse_insert_into_at] inserting {value:?} at {index}",
 						file = file!(), line = line!(), module = module_path!(),
 					);
@@ -1611,7 +1611,7 @@ where Left: Debug + Clone,
 	  OrderFn: FnMut(&Left, &Right) -> Ordering,
 {
 	if items.len() == 0 {
-		log::debug!(
+		log::trace!(
 			"{file}:{line} [{module}::traverse_push] pushing {value:?} to 0",
 			file = file!(), line = line!(), module = module_path!()
 		);
@@ -1627,7 +1627,7 @@ where Left: Debug + Clone,
 
 	match value {
 		value @ MergedVecItem::Left(_) if matches_end => {
-			log::debug!(
+			log::trace!(
 				"{file}:{line} [{module}::traverse_push] pushing {value:?} to {}", items.len(),
 				file = file!(), line = line!(), module = module_path!()
 			);
@@ -1657,7 +1657,7 @@ where Left: Debug + Clone,
 
 				match existing {
 					MergedVecItem::Left(_) => {
-						log::debug!(
+						log::trace!(
 							"{file}:{line} [{module}::traverse_push] inserting {value:?} at {index}",
 							file = file!(), line = line!(), module = module_path!()
 						);
@@ -1675,7 +1675,7 @@ where Left: Debug + Clone,
 							index = index - 1;
 							continue;
 						} else {
-							log::debug!(
+							log::trace!(
 								"{file}:{line} [{module}::traverse_push] inserting {value:?} at {}", index + 1,
 								file = file!(), line = line!(), module = module_path!(),
 							);
@@ -1686,14 +1686,14 @@ where Left: Debug + Clone,
 						Ordering::Equal => unimplemented!("Ordering::Equal has unstable sorting sematics"),
 
 						Ordering::Greater => if index < last {
-							log::debug!(
+							log::trace!(
 								"{file}:{line} [{module}::traverse_push] inserting {value:?} at {}", index + 1,
 								file = file!(), line = line!(), module = module_path!()
 							);
 
 							break insert_into_at(items, index + 1, value);
 						} else {
-							log::debug!(
+							log::trace!(
 								"{file}:{line} [{module}::traverse_push] pushing {value:?} to {}", items.len(),
 								file = file!(), line = line!(), module = module_path!()
 							);
@@ -1706,7 +1706,7 @@ where Left: Debug + Clone,
 		},
 
 		value @ MergedVecItem::Right(_) if matches_end => {
-			log::debug!(
+			log::trace!(
 				"{file}:{line} [{module}::traverse_push] pushing {value:?} to {}", items.len(),
 				file = file!(), line = line!(), module = module_path!(),
 			);
@@ -1737,14 +1737,14 @@ where Left: Debug + Clone,
 				match existing {
 					MergedVecItem::Left(existing) => match order_fn(existing, value.as_right()) {
 						Ordering::Less => if index < last {
-							log::debug!(
+							log::trace!(
 								"{file}:{line} [{module}::traverse_push] inserting {value:?} at {}", index + 1,
 								file = file!(), line = line!(), module = module_path!()
 							);
 
 							break insert_into_at(items, index + 1, value);
 						} else {
-							log::debug!(
+							log::trace!(
 								"{file}:{line} [{module}::traverse_push] pushing {value:?} to {}", items.len(),
 								file = file!(), line = line!(), module = module_path!()
 							);
@@ -1762,7 +1762,7 @@ where Left: Debug + Clone,
 							index = index - 1;
 							continue;
 						} else {
-							log::debug!(
+							log::trace!(
 								"{file}:{line} [{module}::traverse_push] inserting {value:?} at {index}",
 								file = file!(), line = line!(), module = module_path!(),
 							);
@@ -1772,7 +1772,7 @@ where Left: Debug + Clone,
 					},
 
 					MergedVecItem::Right(_) => {
-						log::debug!(
+						log::trace!(
 							"{file}:{line} [{module}::traverse_push] inserting {value:?} at {}",
 							index + 1, file = file!(), line = line!(), module = module_path!(),
 						);
